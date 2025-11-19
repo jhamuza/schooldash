@@ -1,358 +1,2899 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sarawak Pandai Usage Dashboard</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    
-    <!-- Leaflet MarkerCluster CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sarawak Pandai Usage Dashboard</title>
 
-    <style>
-        /* Allow natural scrolling for the whole page */
-        body { 
-            min-height: 100vh;
-            overflow-y: auto;
-        }
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
 
-        /* Enforce map height so it doesn't collapse */
-        #map { 
-            height: 600px; 
-            width: 100%; 
-            z-index: 1; 
-        }
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 
-        .stat-card { transition: all 0.3s ease; }
-        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        
-        /* Custom Scrollbar for sidebar */
-        aside::-webkit-scrollbar { width: 6px; }
-        aside::-webkit-scrollbar-track { background: #f1f1f1; }
-        aside::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
-        aside::-webkit-scrollbar-thumb:hover { background: #555; }
-        
-        /* Table styling */
-        #data-table th, #data-table td { 
-            padding-left: 1.5rem;
-            padding-right: 1.5rem;
-        }
-        
-        /* Custom sorting indicator */
-        .sortable { cursor: pointer; user-select: none; }
-        .sortable.asc:after { content: " ▲"; }
-        .sortable.desc:after { content: " ▼"; }
-        
-        /* Loading spinner */
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            border-top: 4px solid #4f46e5;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Modal Overlay */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 5000;
-        }
-    </style>
+<!-- Leaflet MarkerCluster CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+
+<style>
+/* Allow natural scrolling for the whole page */
+body { 
+min-height: 100vh;
+overflow-y: auto;
+}
+
+/* Enforce map height so it doesn't collapse */
+#map { 
+height: 600px; 
+width: 100%; 
+z-index: 1; 
+}
+
+.stat-card { transition: all 0.3s ease; }
+.stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+
+/* Custom Scrollbar for sidebar */
+aside::-webkit-scrollbar { width: 6px; }
+aside::-webkit-scrollbar-track { background: #f1f1f1; }
+aside::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
+aside::-webkit-scrollbar-thumb:hover { background: #555; }
+
+/* Table styling */
+#data-table th, #data-table td { 
+padding-left: 1.5rem;
+padding-right: 1.5rem;
+}
+
+/* Custom sorting indicator */
+.sortable { cursor: pointer; user-select: none; }
+.sortable.asc:after { content: " ▲"; }
+.sortable.desc:after { content: " ▼"; }
+
+/* Loading spinner */
+.spinner {
+border: 4px solid rgba(0, 0, 0, 0.1);
+border-top: 4px solid #4f46e5;
+border-radius: 50%;
+width: 24px;
+height: 24px;
+animation: spin 1s linear infinite;
+}
+@keyframes spin {
+0% { transform: rotate(0deg); }
+100% { transform: rotate(360deg); }
+}
+
+/* Modal Overlay */
+.modal-overlay {
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+background-color: rgba(0, 0, 0, 0.5);
+display: flex;
+align-items: center;
+justify-content: center;
+z-index: 5000;
+}
+</style>
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans flex flex-col">
 
-    <!-- Header -->
-    <header class="bg-blue-900 text-white p-4 shadow-md flex justify-between items-center z-20 shrink-0">
-        <div>
-            <h1 class="text-2xl font-bold flex items-center gap-2">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.[...]"/></svg>
-                Sarawak Pandai Dashboard
-            </h1>
+<!-- Header -->
+<header class="bg-blue-900 text-white p-4 shadow-md flex justify-between items-center z-20 shrink-0">
+<div>
+<h1 class="text-2xl font-bold flex items-center gap-2">
+<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0121 18.382V7.618a1 1 0 01-.806-.98l-4.553-2.276M15 7l-5.447-2.724A1 1 0 019 3.382V14.146a1 1 0 01-.806.98L3 16.382"></path></svg>
+Sarawak Pandai Dashboard
+</h1>
+            <p class="text-blue-200 text-base">Geospatial visualization of Student & Teacher distribution</p>
             <p class="text-blue-200 text-base">Visualization of Student & Teacher distribution in Sarawak</p>
-        </div>
-        <div class="flex gap-3 items-center">
-             <!-- Update Data Button -->
-             <button id="open-data-modal-button" class="px-4 py-2 bg-blue-700 text-white font-semibold rounded-lg hover:bg-blue-600 transition flex items-center gap-2 text-sm shadow-md">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1[...]"/></svg>
-                Settings & Data
-             </button>
-             
-             <div class="text-right text-sm">
-                 <span id="total-schools-badge" class="bg-blue-700 px-3 py-1 rounded-full">0 Schools</span>
-                 <span id="total-users-badge" class="bg-green-600 px-3 py-1 rounded-full">0 Users</span>
-             </div>
-        </div>
-    </header>
-    
-    <!-- Key Metrics Panel -->
-    <div id="key-metrics-panel" class="bg-white p-4 shadow-md border-b border-gray-200 z-10 shrink-0">
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <!-- Metrics -->
-            <div class="stat-card bg-indigo-50 p-3 rounded border border-indigo-100">
-                <div class="text-xs text-indigo-500 uppercase font-bold">Students</div>
-                <div id="stat-students" class="text-4xl font-bold text-indigo-800">0</div>
-            </div>
-            <div class="stat-card bg-orange-50 p-3 rounded border border-orange-100">
-                <div class="text-xs text-orange-500 uppercase font-bold">Teachers</div>
-                <div id="stat-teachers" class="text-4xl font-bold text-orange-800">0</div>
-            </div>
-            <div class="stat-card bg-emerald-50 p-3 rounded border border-emerald-100">
-                <div class="text-xs text-emerald-500 uppercase font-bold">Total Active Users</div>
-                <div id="stat-total" class="text-4xl font-bold text-emerald-800">0</div>
-            </div>
-            
-            <!-- Top 10 Cities -->
-            <div class="md:col-span-1 bg-gray-50 p-3 rounded border border-gray-100 flex flex-col">
-                <div id="top-cities-label" class="text-xs text-gray-500 uppercase font-bold mb-2">Top 10 Cities By All Users</div>
-                <div class="flex bg-gray-200 rounded p-0.5 mb-2">
-                    <label class="flex-1 text-center cursor-pointer">
-                        <input type="radio" name="top10-city-mode" value="all" class="hidden peer" checked>
-                        <span class="block text-sm py-1 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-emerald-600 transition">All</span>
-                    </label>
-                    <label class="flex-1 text-center cursor-pointer">
-                        <input type="radio" name="top10-city-mode" value="students" class="hidden peer">
-                        <span class="block text-sm py-1 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-indigo-600 transition">Students</span>
-                    </label>
-                    <label class="flex-1 text-center cursor-pointer">
-                        <input type="radio" name="top10-city-mode" value="teachers" class="hidden peer">
-                        <span class="block text-sm py-1 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-orange-600 transition">Teachers</span>
-                    </label>
-                </div>
-                <div id="top-cities-list" class="space-y-1 text-sm overflow-y-auto max-h-32"></div>
-            </div>
+</div>
+<div class="flex gap-3 items-center">
+<!-- Update Data Button -->
+<button id="open-data-modal-button" class="px-4 py-2 bg-blue-700 text-white font-semibold rounded-lg hover:bg-blue-600 transition flex items-center gap-2 text-sm shadow-md">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+Settings & Data
+</button>
 
-            <!-- Top 10 Schools -->
-            <div class="md:col-span-1 bg-gray-50 p-3 rounded border border-gray-100 flex flex-col">
-                <div id="top-schools-label" class="text-xs text-gray-500 uppercase font-bold mb-2">Top 10 Schools by All Users</div>
-                <div class="flex bg-gray-200 rounded p-0.5 mb-2">
-                    <label class="flex-1 text-center cursor-pointer">
-                        <input type="radio" name="top10-school-mode" value="all" class="hidden peer" checked>
-                        <span class="block text-sm py-1 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-emerald-600 transition">All</span>
-                    </label>
-                    <label class="flex-1 text-center cursor-pointer">
-                        <input type="radio" name="top10-school-mode" value="students" class="hidden peer">
-                        <span class="block text-sm py-1 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-indigo-600 transition">Students</span>
-                    </label>
-                    <label class="flex-1 text-center cursor-pointer">
-                        <input type="radio" name="top10-school-mode" value="teachers" class="hidden peer">
-                        <span class="block text-sm py-1 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-orange-600 transition">Teachers</span>
-                    </label>
-                </div>
-                <div id="top-schools-list" class="space-y-1 text-sm overflow-y-auto max-h-32"></div>
-            </div>
-        </div>
-    </div>
+<div class="text-right text-sm">
+<span id="total-schools-badge" class="bg-blue-700 px-3 py-1 rounded-full">0 Schools</span>
+<span id="total-users-badge" class="bg-green-600 px-3 py-1 rounded-full">0 Users</span>
+</div>
+</div>
+</header>
 
-    <!-- Main Content Area (Map + Sidebar) - REMOVED h-screen/overflow-hidden constraints -->
-    <div class="flex flex-col md:flex-row w-full">
-        
-        <!-- Sidebar Controls -->
-        <aside class="w-full md:w-80 bg-white shadow-lg z-10 flex flex-col border-r border-gray-200 shrink-0">
-            <div class="p-5 space-y-5">
-                <!-- Search -->
-                <div>
-                    <label class="block text-sm font-bold text-gray-500 uppercase mb-1">Search School</label>
-                    <input type="text" id="search-input" placeholder="e.g. SMK Pujut" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 te[...]"/>
-                </div>
+<!-- Key Metrics Panel -->
+<div id="key-metrics-panel" class="bg-white p-4 shadow-md border-b border-gray-200 z-10 shrink-0">
+<div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+<!-- Metrics -->
+<div class="stat-card bg-indigo-50 p-3 rounded border border-indigo-100">
+<div class="text-xs text-indigo-500 uppercase font-bold">Students</div>
+<div id="stat-students" class="text-4xl font-bold text-indigo-800">0</div>
+</div>
+<div class="stat-card bg-orange-50 p-3 rounded border border-orange-100">
+<div class="text-xs text-orange-500 uppercase font-bold">Teachers</div>
+<div id="stat-teachers" class="text-4xl font-bold text-orange-800">0</div>
+</div>
+<div class="stat-card bg-emerald-50 p-3 rounded border border-emerald-100">
+<div class="text-xs text-emerald-500 uppercase font-bold">Total Active Users</div>
+<div id="stat-total" class="text-4xl font-bold text-emerald-800">0</div>
+</div>
 
-                <!-- Filters -->
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-sm font-bold text-gray-500 uppercase mb-1">School Type</label>
-                        <select id="type-filter" class="w-full px-2 py-2 border border-gray-300 rounded text-base focus:ring-2 focus:ring-blue-500">
-                            <option value="all">All Types</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-gray-500 uppercase mb-1">City</label>
-                        <select id="city-filter" class="w-full px-2 py-2 border border-gray-300 rounded text-base focus:ring-2 focus:ring-blue-500">
-                            <option value="all">All Cities</option>
-                        </select>
-                    </div>
-                </div>
+<!-- Top 10 Cities -->
+<div class="md:col-span-1 bg-gray-50 p-3 rounded border border-gray-100 flex flex-col">
+<div id="top-cities-label" class="text-xs text-gray-500 uppercase font-bold mb-2">Top 10 Cities By All Users</div>
+<div class="flex bg-gray-200 rounded p-0.5 mb-2">
+<label class="flex-1 text-center cursor-pointer">
+<input type="radio" name="top10-city-mode" value="all" class="hidden peer" checked>
+<span class="block text-sm py-1 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-emerald-600 transition">All</span>
+</label>
+<label class="flex-1 text-center cursor-pointer">
+<input type="radio" name="top10-city-mode" value="students" class="hidden peer">
+<span class="block text-sm py-1 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-indigo-600 transition">Students</span>
+</label>
+<label class="flex-1 text-center cursor-pointer">
+<input type="radio" name="top10-city-mode" value="teachers" class="hidden peer">
+<span class="block text-sm py-1 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-orange-600 transition">Teachers</span>
+</label>
+</div>
+<div id="top-cities-list" class="space-y-1 text-sm overflow-y-auto max-h-32"></div>
+</div>
 
-                <!-- Data Toggle -->
-                <div>
-                    <label class="block text-sm font-bold text-gray-500 uppercase mb-2">Data Source</label>
-                    <div class="flex bg-gray-200 rounded p-1">
-                        <label class="flex-1 text-center cursor-pointer">
-                            <input type="radio" name="data-mode" value="teachers" class="hidden peer">
-                            <span class="block text-sm py-1.5 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-orange-600 transition">Teachers</span>
-                        </label>
-                        <label class="flex-1 text-center cursor-pointer">
-                            <input type="radio" name="data-mode" value="students" class="hidden peer">
-                            <span class="block text-sm py-1.5 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-indigo-600 transition">Students</span>
-                        </label>
-                        <label class="flex-1 text-center cursor-pointer">
-                            <input type="radio" name="data-mode" value="all" class="hidden peer" checked>
-                            <span class="block text-sm py-1.5 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-emerald-600 transition">All</span>
-                        </label>
-                    </div>
-                </div>
+<!-- Top 10 Schools -->
+<div class="md:col-span-1 bg-gray-50 p-3 rounded border border-gray-100 flex flex-col">
+<div id="top-schools-label" class="text-xs text-gray-500 uppercase font-bold mb-2">Top 10 Schools by All Users</div>
+<div class="flex bg-gray-200 rounded p-0.5 mb-2">
+<label class="flex-1 text-center cursor-pointer">
+<input type="radio" name="top10-school-mode" value="all" class="hidden peer" checked>
+<span class="block text-sm py-1 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-emerald-600 transition">All</span>
+</label>
+<label class="flex-1 text-center cursor-pointer">
+<input type="radio" name="top10-school-mode" value="students" class="hidden peer">
+<span class="block text-sm py-1 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-indigo-600 transition">Students</span>
+</label>
+<label class="flex-1 text-center cursor-pointer">
+<input type="radio" name="top10-school-mode" value="teachers" class="hidden peer">
+<span class="block text-sm py-1 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-orange-600 transition">Teachers</span>
+</label>
+</div>
+<div id="top-schools-list" class="space-y-1 text-sm overflow-y-auto max-h-32"></div>
+</div>
+</div>
+</div>
 
-                <!-- Visualization Toggle -->
-                <div>
-                    <label class="block text-sm font-bold text-gray-500 uppercase mb-2">Visualization Mode</label>
-                    <div class="flex items-center justify-between border p-2 rounded bg-white">
-                        <span class="text-base text-gray-600">Cluster Markers</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="vis-toggle" class="sr-only peer">
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:[...]"/>
-                        </label>
-                        <span class="text-base text-gray-600">Heatmap</span>
-                    </div>
-                </div>
-                
-                <!-- LLM Strategic Query Tool -->
-                <div class="pt-4 border-t border-gray-200">
-                    <h4 class="font-semibold text-gray-700 mb-2 text-base flex items-center gap-1">
-                        <svg class="w-4 h-4 text-violet-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414[...]"/></svg>
-                        Strategic Query Tool
-                    </h4>
-                    <p class="text-xs text-gray-500 mb-2">Requires Gemini API Key in Settings</p>
-                    <textarea id="llm-query-input" rows="3" placeholder="E.g., Which cities show high student engagement but low teacher count?" class="w-full p-2 border border-gray-300 rounded t[...]"/></textarea>
-                    <button id="ai-query-button" class="w-full px-3 py-3 bg-violet-600 text-white font-bold rounded-lg hover:bg-violet-700 transition flex items-center justify-center gap-2">
-                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 20v[...]"/></svg>
-                        Get Strategic Insight
-                    </button>
-                </div>
-            </div>
-        </aside>
+<!-- Main Content Area (Map + Sidebar) - REMOVED h-screen/overflow-hidden constraints -->
+<div class="flex flex-col md:flex-row w-full">
 
-        <!-- Map Container (Right Side) -->
-        <main class="flex-1 relative">
-            <div id="map" class="w-full"></div>
-            
-            <!-- Legend Overlay -->
-            <div id="heatmap-legend" class="hidden absolute bottom-8 right-8 bg-white p-3 rounded shadow-lg z-[1000] border border-gray-200">
-                <div class="text-sm font-bold mb-2">User Density</div>
-                <div class="h-2 w-32 bg-gradient-to-r from-yellow-100 via-yellow-400 to-green-900 rounded"></div>
-                <div class="flex justify-between text-xs mt-1 text-gray-500">
-                    <span>Low</span>
-                    <span>High</span>
-                </div>
-            </div>
-        </main>
-    </div>
+<!-- Sidebar Controls -->
+<aside class="w-full md:w-80 bg-white shadow-lg z-10 flex flex-col border-r border-gray-200 shrink-0">
+<div class="p-5 space-y-5">
+<!-- Search -->
+<div>
+<label class="block text-sm font-bold text-gray-500 uppercase mb-1">Search School</label>
+<input type="text" id="search-input" placeholder="e.g. SMK Pujut" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base">
+</div>
 
-    <!-- Data Table Section -->
-    <div id="data-table-container" class="p-4 bg-white shadow-lg mx-4 mb-4 rounded-lg mt-4">
-        <h3 class="text-xl font-semibold text-gray-700 mb-4">Detailed School Data (<span id="table-mode-label">All Users</span>)</h3>
-        
-        <!-- Pagination Controls -->
-        <div class="flex justify-between items-center mb-4">
-            <div class="text-sm text-gray-700">
-                Showing <span id="pagination-start">0</span> to <span id="pagination-end">0</span> of <span id="pagination-total">0</span> entries
-            </div>
-            <div class="flex items-center space-x-4">
-                <label class="text-sm text-gray-700">Per Page:</label>
-                <select id="page-size" class="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500">
-                    <option value="10">10</option>
-                    <option value="30">30</option>
-                    <option value="50">50</option>
-                </select>
-                <div class="flex space-x-1">
-                    <button id="prev-page" class="px-3 py-1 bg-gray-200 text-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed">&larr; Prev</button>
-                    <span id="current-page-display" class="px-3 py-1 bg-blue-500 text-white rounded text-sm">1</span>
-                    <button id="next-page" class="px-3 py-1 bg-gray-200 text-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed">Next &rarr;</button>
-                </div>
-            </div>
-        </div>
+<!-- Filters -->
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="block text-sm font-bold text-gray-500 uppercase mb-1">School Type</label>
+<select id="type-filter" class="w-full px-2 py-2 border border-gray-300 rounded text-base focus:ring-2 focus:ring-blue-500">
+<option value="all">All Types</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-bold text-gray-500 uppercase mb-1">City</label>
+<select id="city-filter" class="w-full px-2 py-2 border border-gray-300 rounded text-base focus:ring-2 focus:ring-blue-500">
+<option value="all">All Cities</option>
+</select>
+</div>
+</div>
 
-        <div class="overflow-x-auto border rounded-lg">
-            <table id="data-table" class="min-w-full divide-y divide-gray-200"></table>
-        </div>
-        
-        <div class="flex justify-center items-center mt-4">
-            <div class="flex items-center space-x-4">
-                <div class="flex space-x-1">
-                    <button id="prev-page-bottom" class="px-3 py-1 bg-gray-200 text-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed">&larr; Prev</button>
-                    <span id="current-page-display-bottom" class="px-3 py-1 bg-blue-500 text-white rounded text-sm">1</span>
-                    <button id="next-page-bottom" class="px-3 py-1 bg-gray-200 text-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed">Next &rarr;</button>
-                </div>
-            </div>
-        </div>
-    </div>
+<!-- Data Toggle -->
+<div>
+<label class="block text-sm font-bold text-gray-500 uppercase mb-2">Data Source</label>
+<div class="flex bg-gray-200 rounded p-1">
+<label class="flex-1 text-center cursor-pointer">
+<input type="radio" name="data-mode" value="teachers" class="hidden peer">
+<span class="block text-sm py-1.5 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-orange-600 transition">Teachers</span>
+</label>
+<label class="flex-1 text-center cursor-pointer">
+<input type="radio" name="data-mode" value="students" class="hidden peer">
+<span class="block text-sm py-1.5 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-indigo-600 transition">Students</span>
+</label>
+<label class="flex-1 text-center cursor-pointer">
+<input type="radio" name="data-mode" value="all" class="hidden peer" checked>
+<span class="block text-sm py-1.5 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-emerald-600 transition">All</span>
+</label>
+</div>
+</div>
 
-    <!-- Data Management Modal -->
-    <div id="data-management-modal" class="modal-overlay hidden">
-        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-md w-11/12 transform transition-transform duration-300">
-            <div class="flex justify-between items-center mb-4 border-b pb-2">
-                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317[...]"/></svg>
-                    Settings & Data
-                </h2>
-                <button id="close-data-modal-button" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></pat[...]"/></svg>
-                </button>
-            </div>
+<!-- Visualization Toggle -->
+<div>
+<label class="block text-sm font-bold text-gray-500 uppercase mb-2">Visualization Mode</label>
+<div class="flex items-center justify-between border p-2 rounded bg-white">
+<span class="text-base text-gray-600">Cluster Markers</span>
+<label class="relative inline-flex items-center cursor-pointer">
+<input type="checkbox" id="vis-toggle" class="sr-only peer">
+<div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+</label>
+<span class="text-base text-gray-600">Heatmap</span>
+</div>
+</div>
 
-            <!-- API Key Section -->
-             <div class="mb-6 p-3 bg-violet-50 border border-violet-100 rounded-lg">
-                <h4 class="font-semibold text-violet-800 mb-1 text-sm">Gemini API Configuration</h4>
-                <p class="text-xs text-gray-600 mb-2">Required for the Strategic Query Tool to work.</p>
-                <div class="flex gap-2">
-                    <input type="password" id="api-key-input" placeholder="Paste your Google Gemini API Key here" class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none[...]"/>
-                    <button id="save-api-key-button" class="px-3 py-2 bg-violet-600 text-white text-sm font-bold rounded hover:bg-violet-700 transition">Save Key</button>
-                </div>
-            </div>
+<!-- LLM Strategic Query Tool -->
+<div class="pt-4 border-t border-gray-200">
+<h4 class="font-semibold text-gray-700 mb-2 text-base flex items-center gap-1">
+<svg class="w-4 h-4 text-violet-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 10.414V14a1 1 0 102 0v-3.586l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd"></path></svg>
+Strategic Query Tool
+</h4>
+<p class="text-xs text-gray-500 mb-2">Requires Gemini API Key in Settings</p>
+<textarea id="llm-query-input" rows="3" placeholder="E.g., Which cities show high student engagement but low teacher count?" class="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 mb-2"></textarea>
+<button id="ai-query-button" class="w-full px-3 py-3 bg-violet-600 text-white font-bold rounded-lg hover:bg-violet-700 transition flex items-center justify-center gap-2">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 20v-3m0 0l-3 3m3-3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0zM12 10V7"></path></svg>
+Get Strategic Insight
+</button>
+</div>
+</div>
+</aside>
 
-            <div class="space-y-4 mb-6 border-t pt-4">
-                <h4 class="font-semibold text-gray-700 mb-2 text-base">Data Upload</h4>
-                <p class="text-xs text-gray-600">Upload new CSV files to temporarily update the dashboard view.</p>
-                <div>
-                    <label class="block text-gray-500 mb-1 font-semibold text-sm">1. Update Students CSV</label>
-                    <input type="file" id="student-upload-modal" accept=".csv" class="block w-full text-gray-500 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:fo[...]"/>
-                </div>
-                <div>
-                    <label class="block text-gray-500 mb-1 font-semibold text-sm">2. Update Teachers CSV</label>
-                    <input type="file" id="teacher-upload-modal" accept=".csv" class="block w-full text-gray-500 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:fo[...]"/>
-                </div>
-            </div>
+<!-- Map Container (Right Side) -->
+<main class="flex-1 relative">
+<div id="map" class="w-full"></div>
 
-            <div class="pt-4 border-t border-gray-200">
-                <h4 class="font-semibold text-gray-700 mb-2 text-base">3. Hardcode Data (Requires Password)</h4>
-                <p class="text-xs text-red-500 mb-2">Warning: This overwrites the default data inside the HTML file.</p>
-                <input type="password" id="save-password-modal" placeholder="Enter secret password" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ri[...]"/>
-                <button id="save-data-button-modal" class="w-full px-3 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition">
-                    Save Data to Code
-                </button>
-            </div>
-        </div>
-    </div>
+<!-- Legend Overlay -->
+<div id="heatmap-legend" class="hidden absolute bottom-8 right-8 bg-white p-3 rounded shadow-lg z-[1000] border border-gray-200">
+<div class="text-sm font-bold mb-2">User Density</div>
+<div class="h-2 w-32 bg-gradient-to-r from-yellow-100 via-yellow-400 to-green-900 rounded"></div>
+<div class="flex justify-between text-xs mt-1 text-gray-500">
+<span>Low</span>
+<span>High</span>
+</div>
+</div>
+</main>
+</div>
+
+<!-- Data Table Section -->
+<div id="data-table-container" class="p-4 bg-white shadow-lg mx-4 mb-4 rounded-lg mt-4">
+<h3 class="text-xl font-semibold text-gray-700 mb-4">Detailed School Data (<span id="table-mode-label">All Users</span>)</h3>
+
+<!-- Pagination Controls -->
+<div class="flex justify-between items-center mb-4">
+<div class="text-sm text-gray-700">
+Showing <span id="pagination-start">0</span> to <span id="pagination-end">0</span> of <span id="pagination-total">0</span> entries
+</div>
+<div class="flex items-center space-x-4">
+<label class="text-sm text-gray-700">Per Page:</label>
+<select id="page-size" class="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500">
+<option value="10">10</option>
+<option value="30">30</option>
+<option value="50">50</option>
+</select>
+<div class="flex space-x-1">
+<button id="prev-page" class="px-3 py-1 bg-gray-200 text-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed">&larr; Prev</button>
+<span id="current-page-display" class="px-3 py-1 bg-blue-500 text-white rounded text-sm">1</span>
+<button id="next-page" class="px-3 py-1 bg-gray-200 text-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed">Next &rarr;</button>
+</div>
+</div>
+</div>
+
+<div class="overflow-x-auto border rounded-lg">
+<table id="data-table" class="min-w-full divide-y divide-gray-200"></table>
+</div>
+
+<div class="flex justify-center items-center mt-4">
+<div class="flex items-center space-x-4">
+<div class="flex space-x-1">
+<button id="prev-page-bottom" class="px-3 py-1 bg-gray-200 text-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed">&larr; Prev</button>
+<span id="current-page-display-bottom" class="px-3 py-1 bg-blue-500 text-white rounded text-sm">1</span>
+<button id="next-page-bottom" class="px-3 py-1 bg-gray-200 text-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed">Next &rarr;</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Data Management Modal -->
+<div id="data-management-modal" class="modal-overlay hidden">
+<div class="bg-white p-6 rounded-xl shadow-2xl max-w-md w-11/12 transform transition-transform duration-300">
+<div class="flex justify-between items-center mb-4 border-b pb-2">
+<h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+<svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+Settings & Data
+</h2>
+<button id="close-data-modal-button" class="text-gray-400 hover:text-gray-600">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+</button>
+</div>
+
+<!-- API Key Section -->
+<div class="mb-6 p-3 bg-violet-50 border border-violet-100 rounded-lg">
+<h4 class="font-semibold text-violet-800 mb-1 text-sm">Gemini API Configuration</h4>
+<p class="text-xs text-gray-600 mb-2">Required for the Strategic Query Tool to work.</p>
+<div class="flex gap-2">
+<input type="password" id="api-key-input" placeholder="Paste your Google Gemini API Key here" class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
+<button id="save-api-key-button" class="px-3 py-2 bg-violet-600 text-white text-sm font-bold rounded hover:bg-violet-700 transition">Save Key</button>
+</div>
+</div>
+
+<div class="space-y-4 mb-6 border-t pt-4">
+<h4 class="font-semibold text-gray-700 mb-2 text-base">Data Upload</h4>
+<p class="text-xs text-gray-600">Upload new CSV files to temporarily update the dashboard view.</p>
+<div>
+<label class="block text-gray-500 mb-1 font-semibold text-sm">1. Update Students CSV</label>
+<input type="file" id="student-upload-modal" accept=".csv" class="block w-full text-gray-500 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition"/>
+</div>
+<div>
+<label class="block text-gray-500 mb-1 font-semibold text-sm">2. Update Teachers CSV</label>
+<input type="file" id="teacher-upload-modal" accept=".csv" class="block w-full text-gray-500 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition"/>
+</div>
+</div>
+
+<div class="pt-4 border-t border-gray-200">
+<h4 class="font-semibold text-gray-700 mb-2 text-base">3. Hardcode Data (Requires Password)</h4>
+<p class="text-xs text-red-500 mb-2">Warning: This overwrites the default data inside the HTML file.</p>
+<input type="password" id="save-password-modal" placeholder="Enter secret password" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-red-500 text-sm mb-3">
+<button id="save-data-button-modal" class="w-full px-3 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition">
+Save Data to Code
+</button>
+</div>
+</div>
+</div>
 
 
-    <!-- Libraries -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-    <script src="assets/marker-user-counts.js"></script>
+<!-- Libraries -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 
-    <script>
-        /**
-         * 1. DEFAULT DATA
-         */
-        let defaultStudentCSV = `school_name,school_type,postcode,city,state_name,total_users
+<script>
+/**
+        * 1. DEFAULT DATA
+        */
+let defaultStudentCSV = `school_name,school_type,postcode,city,state_name,total_users
 "SEKOLAH MENENGAH KEBANGSAAN TEMENGGONG DATUK LAWAI JAU",SM KEBANGSAAN,,MARUDI,Sarawak,464
 "SEKOLAH MENENGAH KEBANGSAAN PUJUT",SM KEBANGSAAN,,MIRI,Sarawak,391
 "SEKOLAH MENENGAH KEBANGSAAN BINTULU",SM KEBANGSAAN,,BINTULU,Sarawak,372
-...`
+"SEKOLAH MENENGAH KEBANGSAAN DEMAK BARU",SM KEBANGSAAN,,KUCHING,Sarawak,341
+"SEKOLAH MENENGAH KEBANGSAAN MERBAU MIRI",SM KEBANGSAAN,,MIRI,Sarawak,323
+"SEKOLAH MENENGAH KEBANGSAAN KIDURONG",SM KEBANGSAAN,,BINTULU,Sarawak,322
+"SEKOLAH MENENGAH KEBANGSAAN LUTONG",SM KEBANGSAAN,,MIRI,Sarawak,308
+"SEKOLAH MENENGAH KEBANGSAAN DALAT",SM KEBANGSAAN,,DALAT,Sarawak,306
+"MRSM MUKAH",MAKTAB RENDAH SAINS MARA,,MUKAH,Sarawak,283
+"SEKOLAH MENENGAH KEBANGSAAN MUARA TUANG",SM KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,279
+"SEKOLAH MENENGAH KEBANGSAAN MARUDI",SM KEBANGSAAN,,BARAM,Sarawak,247
+"SEKOLAH MENENGAH KEBANGSAAN SIBURAN",SM KEBANGSAAN,,KUCHING,Sarawak,244
+"KOLEJ D PATINGGI ABANG HJ ABDILLAH",SM KEBANGSAAN,,KUCHING,Sarawak,240
+"SEKOLAH MENENGAH KEBANGSAAN KOTA SAMARAHAN",SM KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,238
+"SEKOLAH MENENGAH KEBANGSAAN LUNDU",SM KEBANGSAAN,,LUNDU,Sarawak,232
+"SEKOLAH MENENGAH KEBANGSAAN BANDAR BINTULU",SM KEBANGSAAN,,BINTULU,Sarawak,204
+"SEKOLAH MENENGAH KEBANGSAAN PENRISSEN",SM KEBANGSAAN,,KUCHING,Sarawak,195
+"SEKOLAH MENENGAH KEBANGSAAN GREEN ROAD",SM KEBANGSAAN,,KUCHING,Sarawak,192
+"SEKOLAH MENENGAH KEBANGSAAN SIBU JAYA",SM KEBANGSAAN,,SIBU,Sarawak,191
+"SEKOLAH MENENGAH KEBANGSAAN ASYAKIRIN",SM KEBANGSAAN,,BINTULU,Sarawak,189
+"SEKOLAH MENENGAH KEBANGSAAN BARU BINTULU",SM KEBANGSAAN,,BINTULU,Sarawak,187
+"SEKOLAH MENENGAH KEBANGSAAN PADUNGAN",SM KEBANGSAAN,,KUCHING,Sarawak,182
+"SEKOLAH MENENGAH KEBANGSAAN JALAN OYA",SM KEBANGSAAN,,SIBU,Sarawak,181
+"SEKOLAH MENENGAH KEBANGSAAN TUN ABANG HJ OPENG",SM KEBANGSAAN,,KUCHING,Sarawak,165
+"SEKOLAH MENENGAH KEBANGSAAN BATU KAWA",SM KEBANGSAAN,,KUCHING,Sarawak,160
+"SEKOLAH MENENGAH KEBANGSAAN BATU LINTANG",SM KEBANGSAAN,,KUCHING,Sarawak,159
+"SEKOLAH MENENGAH KEBANGSAAN SEMERAH PADI",SM KEBANGSAAN,,KUCHING,Sarawak,159
+"SEKOLAH MENENGAH KEBANGSAAN WIRA PENRISSEN",SM KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,159
+"SEKOLAH MENENGAH KEBANGSAAN MUKAH",SM KEBANGSAAN,,MUKAH,Sarawak,158
+"KOLEJ TUN DATU TUANKU HAJI BUJANG",SM KEBANGSAAN,,MIRI,Sarawak,157
+"SEKOLAH MENENGAH KEBANGSAAN (BM) SARATOK",SM KEBANGSAAN,,SARATOK,Sarawak,154
+"SEKOLAH MENENGAH KEBANGSAAN MATANG JAYA",SM KEBANGSAAN,,KUCHING,Sarawak,150
+"SEKOLAH MENENGAH KEBANGSAAN SERIAN",SM KEBANGSAAN,,SERIAN,Sarawak,143
+"SEKOLAH MENENGAH KEBANGSAAN KAPIT",SM KEBANGSAAN,,KAPIT,Sarawak,140
+"SEKOLAH MENENGAH KEBANGSAAN SARIKEI BARU",SM KEBANGSAAN,,SARIKEI,Sarawak,139
+"SEKOLAH MENENGAH KEBANGSAAN SELIRIK",SM KEBANGSAAN,,KAPIT,Sarawak,138
+"SEKOLAH MENENGAH KEBANGSAAN ST TERESA",SM KEBANGSAAN,,KUCHING,Sarawak,137
+"SEKOLAH MENENGAH KEBANGSAAN BANDAR SAMARIANG",SM KEBANGSAAN,,KUCHING,Sarawak,134
+"SEKOLAH MENENGAH SAINS KUCHING UTARA",SM BERASRAMA PENUH,,KUCHING,Sarawak,134
+"SEKOLAH MENENGAH KEBANGSAAN THREE RIVERS",SM KEBANGSAAN,,MUKAH,Sarawak,132
+"SEKOLAH MENENGAH KEBANGSAAN KEMENA",SM KEBANGSAAN,,BINTULU,Sarawak,132
+"SEKOLAH MENENGAH KEBANGSAAN LAKE",SM KEBANGSAAN,,BAU,Sarawak,128
+"SEKOLAH MENENGAH KEBANGSAAN PAKU (S)",SM KEBANGSAAN,,BAU,Sarawak,128
+"SEKOLAH MENENGAH KEBANGSAAN CHUNG HUA MIRI",SM KEBANGSAAN,,MIRI,Sarawak,125
+"SEKOLAH MENENGAH KEBANGSAAN AGAMA TUN AHMAD ZAIDI",SM AGAMA,,KUCHING,Sarawak,125
+"SEKOLAH MENENGAH KEBANGSAAN BAKO (KUCHING)",SM KEBANGSAAN,,KUCHING,Sarawak,125
+"SEKOLAH MENENGAH KEBANGSAAN TUNKU ABDUL RAHMAN",SM KEBANGSAAN,,KUCHING,Sarawak,119
+"SEKOLAH MENENGAH KEBANGSAAN JALAN ARANG",SM KEBANGSAAN,,KUCHING,Sarawak,118
+"SEKOLAH MENENGAH KEBANGSAAN TINGGI KUCHING",SM KEBANGSAAN,,KUCHING,Sarawak,118
+"SEKOLAH MENENGAH KEBANGSAAN PETRA JAYA",SM KEBANGSAAN,,KUCHING,Sarawak,117
+"ST JOSEPH PRIVATE SCHOOL",PRIVATE SCHOOL,,KUCHING,Sarawak,114
+"SEKOLAH MENENGAH KEBANGSAAN KAPIT NO.2",SM KEBANGSAAN,,KAPIT,Sarawak,113
+"SEKOLAH MENENGAH KEBANGSAAN SRI MATANG",SM KEBANGSAAN,,KUCHING,Sarawak,112
+"SEKOLAH MENENGAH KEBANGSAAN RIAM",SM KEBANGSAAN,,MIRI,Sarawak,112
+"SEKOLAH MENENGAH KEBANGSAAN MATANG HILIR",SM KEBANGSAAN,,KUCHING,Sarawak,112
+"SEKOLAH MENENGAH KEBANGSAAN DATO PERMAISURI",SM KEBANGSAAN,,MIRI,Sarawak,111
+"SEKOLAH MENENGAH KEBANGSAAN SRI AMAN",SM KEBANGSAAN,,SRI AMAN,Sarawak,108
+"SMK SUNGAI TAPANG",SM KEBANGSAAN,,KUCHING,Sarawak,108
+"SEKOLAH KEBANGSAAN MADRASAH DATUK HJ. ABDUL KADIR HASAN",KEBANGSAAN,,KUCHING,Sarawak,106
+"SEKOLAH MENENGAH KEBANGSAAN METHODIST",SM KEBANGSAAN,,SIBU,Sarawak,103
+"MRSM BETONG",MAKTAB RENDAH SAINS MARA,,BETONG,Sarawak,103
+"SEKOLAH MENENGAH KEBANGSAAN BUKIT ASSEK",SM KEBANGSAAN,,SIBU,Sarawak,102
+"SEKOLAH MENENGAH KEBANGSAAN TATAU",SM KEBANGSAAN,,TATAU,Sarawak,101
+"SEKOLAH MENENGAH KEBANGSAAN LIMBANG",SM KEBANGSAAN,,LIMBANG,Sarawak,100
+"MRSM KUCHING",MAKTAB RENDAH SAINS MARA,,KUCHING,Sarawak,99
+"SEKOLAH MENENGAH KEBANGSAAN BAU",SM KEBANGSAAN,,BAU,Sarawak,97
+"SEKOLAH MENENGAH KEBANGSAAN D P H ABDUL GAPOR",SM KEBANGSAAN,,KUCHING,Sarawak,96
+"SEKOLAH MENENGAH KEBANGSAAN KAMPUNG NANGKA",SM KEBANGSAAN,,SIBU,Sarawak,96
+"SEKOLAH MENENGAH KEBANGSAAN SERI SETIA",SM KEBANGSAAN,,KUCHING,Sarawak,95
+"SEKOLAH MENENGAH KEBANGSAAN SUAI",SM KEBANGSAAN,,NIAH,Sarawak,94
+"SEKOLAH MENENGAH KEBANGSAAN BALAI RINGIN",SM KEBANGSAAN,,SERIAN,Sarawak,93
+"SEKOLAH MENENGAH KEBANGSAAN KANOWIT",SM KEBANGSAAN,,KANOWIT,Sarawak,93
+"SEKOLAH KEBANGSAAN ABANG HAJI MATAHIR",KEBANGSAAN,,SARIKEI,Sarawak,91
+"SEKOLAH MENENGAH KEBANGSAAN KAI CHUNG",SM KEBANGSAAN,,BINTANGOR,Sarawak,90
+"SEKOLAH MENENGAH KEBANGSAAN ST ANTHONY",SM KEBANGSAAN,,SARIKEI,Sarawak,88
+"SEKOLAH KEBANGSAAN AGAMA (MIS) MIRI",KEBANGSAAN,,MIRI,Sarawak,87
+"SEKOLAH MENENGAH KEBANGSAAN TAMAN TUNKU",SM KEBANGSAAN,,MIRI,Sarawak,84
+"SEKOLAH MENENGAH KEBANGSAAN LAWAS",SM KEBANGSAAN,,LAWAS,Sarawak,83
+"SEKOLAH MENENGAH KEBANGSAAN ROSLI DHOBY",SM KEBANGSAAN,,SIBU,Sarawak,82
+"SEKOLAH MENENGAH KEBANGSAAN ASAJAYA",SM KEBANGSAAN,,ASAJAYA,Sarawak,81
+"SEKOLAH MENENGAH KEBANGSAAN SIMANGGANG",SM KEBANGSAAN,,SRI AMAN,Sarawak,80
+"SEKOLAH MENENGAH KEBANGSAAN SUNDAR",SM KEBANGSAAN,,LAWAS,Sarawak,78
+"SEKOLAH MENENGAH KEBANGSAAN KABONG",SM KEBANGSAAN,,KABONG,Sarawak,78
+"SEKOLAH MENENGAH KEBANGSAAN MATU",SM KEBANGSAAN,,MATU,Sarawak,76
+"SEKOLAH MENENGAH KEBANGSAAN BANDAR KUCHING NO.1",SM KEBANGSAAN,,KUCHING,Sarawak,76
+"SEKOLAH KEBANGSAAN ST EDMUND",KEBANGSAAN,,LIMBANG,Sarawak,75
+"SEKOLAH MENENGAH KEBANGSAAN TUN ABDUL RAZAK",SM KEBANGSAAN,,KUCHING,Sarawak,75
+"SEKOLAH MENENGAH KEBANGSAAN ST JOSEPH",SM KEBANGSAAN,,KUCHING,Sarawak,74
+"SEKOLAH MENENGAH KEBANGSAAN TOH PUAN DATUK PATINGGI HJH NORMAH",SM KEBANGSAAN,,DARO,Sarawak,74
+"SEKOLAH MENENGAH KEBANGSAAN OYA",SM KEBANGSAAN,,OYA,Sarawak,73
+"SEKOLAH MENENGAH KEBANGSAAN ST MARY KUCHING",SM KEBANGSAAN,,KUCHING,Sarawak,73
+"SEKOLAH KEBANGSAAN AGAMA (M.I.S), BINTULU",KEBANGSAAN,,BINTULU,Sarawak,72
+"SEKOLAH MENENGAH KEBANGSAAN GEDONG",SM KEBANGSAAN,,SERIAN,Sarawak,72
+"SEKOLAH MENENGAH KEBANGSAAN KUBONG",SM KEBANGSAAN,,LIMBANG,Sarawak,71
+"SEKOLAH MENENGAH SAINS KUCHING",SM BERASRAMA PENUH,,KUCHING,Sarawak,71
+"SEKOLAH MENENGAH KEBANGSAAN DATUK PATINGGI KEDIT",SM KEBANGSAAN,,BETONG,Sarawak,71
+"SEKOLAH MENENGAH KEBANGSAAN ST LUKE",SM KEBANGSAAN,,SRI AMAN,Sarawak,70
+"SEKOLAH MENENGAH KEBANGSAAN MERADONG",SM KEBANGSAAN,,BINTANGOR,Sarawak,70
+"SEKOLAH MENENGAH KEBANGSAAN SEMATAN",SM KEBANGSAAN,,SEMATAN,Sarawak,70
+"SEKOLAH MENENGAH KEBANGSAAN LOPENG TENGAH",SM KEBANGSAAN,,MIRI,Sarawak,70
+"SEKOLAH MENENGAH KEBANGSAAN ST. JOSEPH, MIRI",SM KEBANGSAAN,,MIRI,Sarawak,69
+"SEKOLAH KEBANGSAAN (A) IBNU KHALDUN",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,68
+"SEKOLAH MENENGAH KEBANGSAAN PENDING",SM KEBANGSAAN,,KUCHING,Sarawak,68
+"SEKOLAH MENENGAH KEBANGSAAN SADONG HILIR (SEMERA)",SM KEBANGSAAN,,ASAJAYA,Sarawak,68
+"SEKOLAH MENENGAH KEBANGSAAN PESANTREN ABDUL TAIB MAHMUD",SM AGAMA,,ASAJAYA,Sarawak,67
+"SEKOLAH MENENGAH KEBANGSAAN SPAOH",SM KEBANGSAAN,,SPAOH,Sarawak,67
+"SEKOLAH KEBANGSAAN SIBU JAYA",KEBANGSAAN,,SIBU,Sarawak,67
+"SEKOLAH MENENGAH KEBANGSAAN SENIBONG",SM KEBANGSAAN,,LUNDU,Sarawak,66
+"SEKOLAH MENENGAH KEBANGSAAN ASAJAYA NO.2",SM KEBANGSAAN,,ASAJAYA,Sarawak,66
+"SEKOLAH MENENGAH SAINS MIRI",SM BERASRAMA PENUH,,MIRI,Sarawak,65
+"SEKOLAH MENENGAH KEBANGSAAN ENGKILILI",SM KEBANGSAAN,,ENGKILILI,Sarawak,65
+"SEKOLAH MENENGAH KEBANGSAAN KALAKA",SM KEBANGSAAN,,ROBAN,Sarawak,65
+"SEKOLAH MENENGAH KEBANGSAAN SARATOK",SM KEBANGSAAN,,SARATOK,Sarawak,65
+"SEKOLAH MENENGAH KEBANGSAAN SUBIS",SM KEBANGSAAN,,BATU NIAH,Sarawak,64
+"SEKOLAH MENENGAH KEBANGSAAN SADONG JAYA",SM KEBANGSAAN,,SADONG,Sarawak,63
+"SEKOLAH MENENGAH KEBANGSAAN PUSA",SM KEBANGSAAN,,PUSA,Sarawak,62
+"SEKOLAH MENENGAH KEBANGSAAN TARAT",SM KEBANGSAAN,,SERIAN,Sarawak,62
+"SEKOLAH MENENGAH KEBANGSAAN ST. COLUMBA",SM KEBANGSAAN,,MIRI,Sarawak,60
+"SEKOLAH MENENGAH KEBANGSAAN SEBUYAU",SM KEBANGSAAN,,SEBUYAU,Sarawak,60
+"SEKOLAH MENENGAH KEBANGSAAN TEBAKANG",SM KEBANGSAAN,,SERIAN,Sarawak,59
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA 2",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,59
+"SEKOLAH MENENGAH KEBANGSAAN TEBEDU",SM KEBANGSAAN,,SERIAN,Sarawak,58
+"SEKOLAH KEBANGSAAN AGAMA (MIS) LAWAS",KEBANGSAAN,,LAWAS,Sarawak,58
+"SEKOLAH MENENGAH KEBANGSAAN MERAPOK",SM KEBANGSAAN,,LAWAS,Sarawak,58
+"SEKOLAH MENENGAH KEBANGSAAN LUBOK ANTU",SM KEBANGSAAN,,LUBOK ANTU,Sarawak,58
+"SEKOLAH KEBANGSAAN JALAN BINTANG",KEBANGSAAN,,MIRI,Sarawak,58
+"Riam Road Secondary School",PRIVATE SCHOOL,,MIRI,Sarawak,57
+"SEKOLAH MENENGAH KEBANGSAAN LANANG",SM KEBANGSAAN,,SIBU,Sarawak,57
+"SEKOLAH MENENGAH KEBANGSAAN BARU",SM KEBANGSAAN,,MIRI,Sarawak,57
+"SEKOLAH MENENGAH KEBANGSAAN BELAGA",SM KEBANGSAAN,,BELAGA,Sarawak,56
+"SEKOLAH MENENGAH KEBANGSAAN SARIBAS",SM KEBANGSAAN,,DEBAK,Sarawak,56
+"SEKOLAH MENENGAH KEBANGSAAN SACRED HEART",SM KEBANGSAAN,,SIBU,Sarawak,56
+"SEKOLAH MENENGAH KEBANGSAAN BELAWAI",SM KEBANGSAAN,,BELAWAI,Sarawak,56
+"SEKOLAH KEBANGSAAN LUTONG",KEBANGSAAN,,MIRI,Sarawak,55
+"SEKOLAH MENENGAH KEBANGSAAN ST. AUGUSTINE BETONG",SM KEBANGSAAN,,BETONG,Sarawak,55
+"SEKOLAH MENENGAH KEBANGSAAN ST. PATRICK MUKAH",SM KEBANGSAAN,,MUKAH,Sarawak,54
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SIMANGGANG",JENIS KEBANGSAAN (C),,SRI AMAN,Sarawak,54
+"SEKOLAH KEBANGSAAN SEMERAH PADI",KEBANGSAAN,,KUCHING,Sarawak,54
+"SEKOLAH MENENGAH KEBANGSAAN SONG",SM KEBANGSAAN,,SONG,Sarawak,53
+"SEKOLAH MENENGAH KEBANGSAAN ST ELIZABETH",SM KEBANGSAAN,,SIBU,Sarawak,53
+"SEKOLAH MENENGAH KEBANGSAAN AGAMA SHEIKH HJ OTHMAN ABD WAHAB",SMK AGAMA,,KUCHING,Sarawak,53
+"SEKOLAH MENENGAH KEBANGSAAN TUNG HUA",SM KEBANGSAAN,,SIBU,Sarawak,53
+"SEKOLAH KEBANGSAAN GREEN ROAD",KEBANGSAAN,,KUCHING,Sarawak,52
+"SEKOLAH MENENGAH KEBANGSAAN BAKUN",SM KEBANGSAAN,,BELAGA,Sarawak,52
+"SEKOLAH MENENGAH KEBANGSAAN TAEE",SM KEBANGSAAN,,SERIAN,Sarawak,52
+"SEKOLAH MENENGAH KEBANGSAAN LUAR BANDAR MIRI",SM KEBANGSAAN,,MIRI,Sarawak,51
+"SEKOLAH MENENGAH KEBANGSAAN TELANG USAN",SM KEBANGSAAN,,BARAM,Sarawak,51
+"SMT SEJINGKAT",SM TEKNIK,,KUCHING,Sarawak,51
+"SEKOLAH MENENGAH KEBANGSAAN SUNGAI MERAH",SM KEBANGSAAN,,SIBU,Sarawak,51
+"SEKOLAH MENENGAH KEBANGSAAN SERI PATIAMBUN LIMBANG",SM KEBANGSAAN,,LIMBANG,Sarawak,51
+"SEKOLAH MENENGAH KEBANGSAAN BEKENU",SM KEBANGSAAN,,BEKENU,Sarawak,49
+"SEKOLAH KEBANGSAAN WIRA JAYA",KEBANGSAAN,,KUCHING,Sarawak,49
+"SEKOLAH MENENGAH LODGE",PRIVATE SCHOOL,,KUCHING,Sarawak,48
+"SEKOLAH KEBANGSAAN MERBAU MIRI",KEBANGSAAN,,MIRI,Sarawak,47
+"SEKOLAH MENENGAH KEBANGSAAN BANDAR SARIKEI",SM KEBANGSAAN,,SARIKEI,Sarawak,47
+"SEKOLAH KEBANGSAAN POYUT",KEBANGSAAN,,MARUDI,Sarawak,47
+"SEKOLAH MENENGAH KEBANGSAAN SRI SADONG",SM KEBANGSAAN,,SIMUNJAN,Sarawak,46
+"SEKOLAH KEBANGSAAN BELIPAT",KEBANGSAAN,,LAWAS,Sarawak,46
+"SEKOLAH MENENGAH KEBANGSAAN BANDAR SIBU",SM KEBANGSAAN,,SIBU,Sarawak,46
+"SEKOLAH MENENGAH KEBANGSAAN JULAU",SM KEBANGSAAN,,JULAU,Sarawak,45
+"SEKOLAH MENENGAH KEBANGSAAN MELUGU",SM KEBANGSAAN,,SRI AMAN,Sarawak,45
+"Yayasan Sarawak International Secondary School",INTERNATIONAL SCHOOL,,KUCHING,Sarawak,45
+"SEKOLAH MENENGAH KEBANGSAAN SEMOP",SM KEBANGSAAN,,DARO,Sarawak,44
+"SEKOLAH KEBANGSAAN ASYAKIRIN",KEBANGSAAN,,BINTULU,Sarawak,44
+"SEKOLAH KEBANGSAAN MATANG JAYA",KEBANGSAAN,,KUCHING,Sarawak,44
+"SEKOLAH MENENGAH KEBANGSAAN TIONG HIN",SM KEBANGSAAN,,SIBU,Sarawak,44
+"SEKOLAH KEBANGSAAN KITA",KEBANGSAAN,,NIAH,Sarawak,44
+"SEKOLAH MENENGAH KEBANGSAAN TRUSAN",SM KEBANGSAAN,,LAWAS,Sarawak,44
+"SEKOLAH MENENGAH KEBANGSAAN CHUNG HUA",SM KEBANGSAAN,,SIBU,Sarawak,43
+"SEKOLAH KEBANGSAAN SIOL KANAN",KEBANGSAAN,,KUCHING,Sarawak,43
+"SEKOLAH KEBANGSAAN JALAN MUARA TUANG",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,43
+"SEKOLAH MENENGAH KEBANGSAAN DURIN",SM KEBANGSAAN,,SIBU,Sarawak,43
+"SEKOLAH KEBANGSAAN ST MARY KUCHING",KEBANGSAAN,,KUCHING,Sarawak,42
+"SEKOLAH KEBANGSAAN KIDURONG",KEBANGSAAN,,BINTULU,Sarawak,42
+"SEKOLAH MENENGAH KEBANGSAAN LUAK",SM KEBANGSAAN,,MIRI,Sarawak,42
+"SEKOLAH KEBANGSAAN SG PETAI",KEBANGSAAN,,SARIKEI,Sarawak,41
+"SEKOLAH MENENGAH KEBANGSAAN SIMUNJAN NO 1",SM KEBANGSAAN,,SIMUNJAN,Sarawak,41
+"SEKOLAH KEBANGSAAN AGAMA SIBU",KEBANGSAAN,,SIBU,Sarawak,41
+"SEKOLAH MENENGAH KEBANGSAAN SANTUBONG",SM KEBANGSAAN,,KUCHING,Sarawak,41
+"SEKOLAH KEBANGSAAN DATO MOHD MUSA",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,40
+"SEKOLAH MENENGAH KEBANGSAAN LONG LAMA",SM KEBANGSAAN,,LONG LAMA,Sarawak,40
+"SEKOLAH KEBANGSAAN KIDURONG II",KEBANGSAAN,,BINTULU,Sarawak,40
+"SEKOLAH MENENGAH KEBANGSAAN DATUK HAJI ABDUL RAHMAN YAKUB",SM KEBANGSAAN,,KANOWIT,Sarawak,39
+"SEKOLAH KEBANGSAAN KAMPUNG JEPAK",KEBANGSAAN,,BINTULU,Sarawak,39
+"SEKOLAH KEBANGSAAN PETRA JAYA",KEBANGSAAN,,KUCHING,Sarawak,38
+"SEKOLAH MENENGAH KEBANGSAAN BANDAR BINTANGOR",SM KEBANGSAAN,,BINTANGOR,Sarawak,38
+"SEKOLAH KEBANGSAAN SATRIA JAYA",KEBANGSAAN,,KUCHING,Sarawak,38
+"SEKOLAH KEBANGSAAN BANDAR SAMARIANG",KEBANGSAAN,,KUCHING,Sarawak,37
+"TUNKU PUTRA INTERNATIONAL SCHOOL",INTERNATIONAL SCHOOL,,KUCHING,Sarawak,37
+"SEKOLAH JENIS KEBANGSAAN (CINA) KWANG CHIEN",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,36
+"SEKOLAH KEBANGSAAN MIRI",KEBANGSAAN,,MIRI,Sarawak,36
+"SEKOLAH MENENGAH KEBANGSAAN BUKIT LIMA",SM KEBANGSAAN,,SIBU,Sarawak,36
+"SEKOLAH KEBANGSAAN TANJUNG BATU",KEBANGSAAN,,BINTULU,Sarawak,35
+"SEKOLAH MENENGAH KEBANGSAAN SG PAOH",SM KEBANGSAAN,,SARIKEI,Sarawak,35
+"SEKOLAH KEBANGSAAN SENADIN",KEBANGSAAN,,MIRI,Sarawak,35
+"SEKOLAH KEBANGSAAN SENTOSA SIBU",KEBANGSAAN,,SIBU,Sarawak,35
+"SEKOLAH SENI MALAYSIA SARAWAK",SEKOLAH SENI,,KUCHING,Sarawak,35
+"SEKOLAH MENENGAH KEBANGSAAN ULU LAYAR",SM KEBANGSAAN,,BETONG,Sarawak,34
+"SEKOLAH MENENGAH KEBANGSAAN BELADIN",SM KEBANGSAAN,,PUSA,Sarawak,34
+"SEKOLAH KEBANGSAAN DATO SHARIF HAMID",KEBANGSAAN,,MARUDI,Sarawak,34
+"SEKOLAH MENENGAH KEBANGSAAN TINGGI SARIKEI",SM KEBANGSAAN,,SARIKEI,Sarawak,33
+"SEKOLAH KEBANGSAAN BULAN JERAGAM",KEBANGSAAN,,SEBUYAU,Sarawak,33
+"SEKOLAH MENENGAH KEBANGSAAN PAKAN",SM KEBANGSAAN,,PAKAN,Sarawak,33
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA NO.4, KUCHING",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,33
+"SEKOLAH MENENGAH KEBANGSAAN LUAR BANDAR NO 1",SM KEBANGSAAN,,SIBU,Sarawak,33
+"SEKOLAH MENENGAH KEBANGSAAN TINJAR",SM KEBANGSAAN,,BARAM,Sarawak,31
+"SEKOLAH MENENGAH KEBANGSAAN PADAWAN",SM KEBANGSAAN,,KUCHING,Sarawak,31
+"SEKOLAH KEBANGSAAN SOUTH",KEBANGSAAN,,MIRI,Sarawak,30
+"SEKOLAH MENENGAH KEBANGSAAN MEDAMIT",SM KEBANGSAAN,,LIMBANG,Sarawak,30
+"SEKOLAH MENENGAH KEBANGSAAN BAKONG",SM KEBANGSAAN,,MIRI,Sarawak,30
+"SEKOLAH MENENGAH KEBANGSAAN AGAMA IGAN",SMK AGAMA,,MUKAH,Sarawak,30
+"SEKOLAH KEBANGSAAN BINTULU",KEBANGSAAN,,BINTULU,Sarawak,29
+"SEKOLAH MENENGAH KEBANGSAAN AGAMA SIBU (S)",SMK AGAMA,,SIBU,Sarawak,29
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA PUJUT",JENIS KEBANGSAAN (C),,MIRI,Sarawak,29
+"SEKOLAH KEBANGSAAN KRUSEN",KEBANGSAAN,,SERIAN,Sarawak,29
+"SEKOLAH KEBANGSAAN LUAGAN",KEBANGSAAN,,LAWAS,Sarawak,29
+"SEKOLAH KEBANGSAAN TAN SRI DATUK HAJI MOHAMED",KEBANGSAAN,,KUCHING,Sarawak,28
+"SEKOLAH KEBANGSAAN RAKYAT",KEBANGSAAN,,KUCHING,Sarawak,28
+"SEKOLAH MENENGAH KEBANGSAAN TABUAN JAYA",SM KEBANGSAAN,,KUCHING,Sarawak,28
+"SEKOLAH KEBANGSAAN ANCHI",KEBANGSAAN,,MIRI,Sarawak,28
+"SEKOLAH MENENGAH KEBANGSAAN SEBAUH",SM KEBANGSAAN,,SEBAUH,Sarawak,27
+"SEKOLAH MENENGAH KEBANGSAAN ST THOMAS",SM KEBANGSAAN,,KUCHING,Sarawak,27
+"SEKOLAH KEBANGSAAN ST TERESA KUCHING",KEBANGSAAN,,KUCHING,Sarawak,27
+"SEKOLAH KEBANGSAAN ST ANDREW SARIKEI",KEBANGSAAN,,SARIKEI,Sarawak,26
+"SEKOLAH MENENGAH KEBANGSAAN SONG 2",SM KEBANGSAAN,,SONG,Sarawak,26
+"SEKOLAH KEBANGSAAN ULU SG MERAH",KEBANGSAAN,,SIBU,Sarawak,26
+"SEKOLAH KEBANGSAAN ABUN MATU",KEBANGSAAN,,BELAGA,Sarawak,26
+"SEKOLAH KEBANGSAAN MATANG",KEBANGSAAN,,KUCHING,Sarawak,25
+"SEKOLAH KEBANGSAAN MUARA PAYANG",KEBANGSAAN,,SARIKEI,Sarawak,25
+"SEKOLAH KEBANGSAAN MAPU",KEBANGSAAN,,SERIAN,Sarawak,25
+"SEKOLAH MENENGAH KEBANGSAAN ULU BALINGIAN",SM KEBANGSAAN,,SIBU,Sarawak,25
+"SEKOLAH KEBANGSAAN LONG TENGOA",KEBANGSAAN,,LAWAS,Sarawak,24
+"SEKOLAH KEBANGSAAN TUDAN",KEBANGSAAN,,MIRI,Sarawak,24
+"SEKOLAH JENIS KEBANGSAAN (CINA) KENG NANG",JENIS KEBANGSAAN (C),,SIBU,Sarawak,24
+"SEKOLAH KEBANGSAAN JALAN DESHON",KEBANGSAAN,,SIBU,Sarawak,24
+"SEKOLAH KEBANGSAAN ST ANNE",KEBANGSAAN,,SARIKEI,Sarawak,23
+"KOLEJ VOKASIONAL BINTULU",KOLEJ VOKASIONAL,,BINTULU,Sarawak,23
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA TUDAN",JENIS KEBANGSAAN (C),,MIRI,Sarawak,23
+"SEKOLAH MENENGAH KEBANGSAAN SG MAONG",SM KEBANGSAAN,,KUCHING,Sarawak,23
+"SEKOLAH KEBANGSAAN ST. ANTHONY, BINTULU",KEBANGSAAN,,BINTULU,Sarawak,22
+"SEKOLAH KEBANGSAAN GITA",KEBANGSAAN,,KUCHING,Sarawak,22
+"SEKOLAH KEBANGSAAN SUBA BUAN",KEBANGSAAN,,BAU,Sarawak,22
+"SEKOLAH KEBANGSAAN SAINT JOSEPH",KEBANGSAAN,,KUCHING,Sarawak,21
+"SEKOLAH KEBANGSAAN ST THOMAS",KEBANGSAAN,,KUCHING,Sarawak,21
+"KOLEJ VOKASIONAL KUCHING",KOLEJ VOKASIONAL,,KUCHING,Sarawak,21
+"SEKOLAH RENDAH SUNNY HILL",PRIVATE SCHOOL,,KUCHING,Sarawak,21
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BATU 4 1/2",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,21
+"SEKOLAH KEBANGSAAN (AGAMA) MAJLIS ISLAM SARAWAK MUKAH",KEBANGSAAN,,MUKAH,Sarawak,21
+"SEKOLAH MENENGAH KEBANGSAAN JULAU NO.2",SM KEBANGSAAN,,JULAU,Sarawak,20
+"SEKOLAH MENENGAH KEBANGSAAN SG TAPANG",SM KEBANGSAAN,,KUCHING,Sarawak,20
+"SEKOLAH KEBANGSAAN AGAMA SARIKEI",KEBANGSAAN,,SARIKEI,Sarawak,20
+"SEKOLAH KEBANGSAAN RANCANGAN PERUMAHAN RAKYAT 'RPR'",KEBANGSAAN,,KUCHING,Sarawak,20
+"SEKOLAH KEBANGSAAN SEMENGGOK",KEBANGSAAN,,KUCHING,Sarawak,20
+"SEKOLAH MENENGAH KEBANGSAAN AGAMA MATANG 2",SMK AGAMA,,KUCHING,Sarawak,20
+"SEKOLAH MENENGAH KEBANGSAAN BAWANG ASSAN",SM KEBANGSAAN,,SIBU,Sarawak,19
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA 1",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,19
+"SEKOLAH KEBANGSAAN ABANG ABDUL RAHMAN",KEBANGSAAN,,SARATOK,Sarawak,19
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA ENGKILILI",JENIS KEBANGSAAN (C),,ENGKILILI,Sarawak,19
+"SEKOLAH MENENGAH KEBANGSAAN TONG HUA",SM KEBANGSAAN,,BINTANGOR,Sarawak,19
+"SEKOLAH JENIS KEBANGSAAN (CINA) METHODIST (M)",JENIS KEBANGSAAN (C),,SIBU,Sarawak,19
+"SEKOLAH MENENGAH KEBANGSAAN DESHON",SM KEBANGSAAN,,SIBU,Sarawak,19
+"SEKOLAH MENENGAH KEBANGSAAN AGAMA SARATOK",SMK AGAMA,,SARATOK,Sarawak,19
+"SEKOLAH KEBANGSAAN AGAMA SRI AMAN",KEBANGSAAN,,SRI AMAN,Sarawak,19
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA NO.6",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,19
+"SEKOLAH KEBANGSAAN ST JOSEPH",KEBANGSAAN,,MIRI,Sarawak,19
+"SEKOLAH JENIS KEBANGSAAN (CINA) TUNG KWONG",JENIS KEBANGSAAN (C),,BINTANGOR,Sarawak,18
+"SEKOLAH KEBANGSAAN ASTANA",KEBANGSAAN,,KUCHING,Sarawak,18
+"SEKOLAH JENIS KEBANGSAAN (CINA) TUNG HUA",JENIS KEBANGSAAN (C),,SIBU,Sarawak,18
+"SEKOLAH KEBANGSAAN LUSONG LAKU",KEBANGSAAN,,BELAGA,Sarawak,18
+"SEKOLAH KEBANGSAAN ABANG ALI",KEBANGSAAN,,SIBU,Sarawak,18
+"KOLEJ VOKASIONAL MIRI",KOLEJ VOKASIONAL,,MIRI,Sarawak,18
+"SEKOLAH MENENGAH KEBANGSAAN AGAMA",SMK AGAMA,,MIRI,Sarawak,18
+"SEKOLAH KEBANGSAAN SG NAMAN",KEBANGSAAN,,SIBU,Sarawak,18
+"Sekolah Kebangsaan Kampung Baru",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,17
+"SEKOLAH KEBANGSAAN STAPOK",KEBANGSAAN,,KUCHING,Sarawak,17
+"SEKOLAH KEBANGSAAN GERSIK",KEBANGSAAN,,KUCHING,Sarawak,17
+"SEKOLAH RENDAH LODGE",PRIVATE SCHOOL,,KUCHING,Sarawak,17
+"CHUNG HUA MIDDLE SCHOOL NO 3 KUCHING",PRIVATE SCHOOL,,KUCHING,Sarawak,17
+"SEKOLAH KEBANGSAAN ENDAP",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,17
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA LUTONG",JENIS KEBANGSAAN (C),,MIRI,Sarawak,17
+"SEKOLAH KEBANGSAAN SENIBONG",KEBANGSAAN,,BAU,Sarawak,16
+"SEKOLAH RENDAH SRI MAWAR",PRIVATE SCHOOL,,MIRI,Sarawak,16
+"SEKOLAH KEBANGSAAN BATU LINTANG",KEBANGSAAN,,SRI AMAN,Sarawak,16
+"SEKOLAH KEBANGSAAN ST COLUMBA",KEBANGSAAN,,MIRI,Sarawak,16
+"SEKOLAH KEBANGSAAN TUANKU BAGUS",KEBANGSAAN,,SEBUYAU,Sarawak,16
+"SEKOLAH JENIS KEBANGSAAN (CINA) STAMPIN",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,16
+"SEKOLAH KEBANGSAAN TEMENGGONG DATUK MUIP",KEBANGSAAN,,MIRI,Sarawak,16
+"SEKOLAH KEBANGSAAN NANGA AUP",KEBANGSAAN,,ENGKILILI,Sarawak,16
+"SEKOLAH KEBANGSAAN REBAK",KEBANGSAAN,,ASAJAYA,Sarawak,15
+"SEKOLAH KEBANGSAAN LEPONG BALLEH",KEBANGSAAN,,KAPIT,Sarawak,15
+"LODGE INTERNATIONAL SCHOOL",INTERNATIONAL SCHOOL,,KUCHING,Sarawak,15
+"SEKOLAH JENIS KEBANGSAAN (CINA) THAI KWANG",JENIS KEBANGSAAN (C),,SIBU,Sarawak,15
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHONG BOON",JENIS KEBANGSAAN (C),,MUKAH,Sarawak,15
+"SEKOLAH JENIS KEBANGSAAN (CINA) SU TAK",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,15
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA KROKOP",JENIS KEBANGSAAN (C),,MIRI,Sarawak,14
+"SEKOLAH KEBANGSAAN TABUAN HILIR",KEBANGSAAN,,KUCHING,Sarawak,14
+"SEKOLAH KEBANGSAAN KALOK",KEBANGSAAN,,PUSA,Sarawak,14
+"SEKOLAH KEBANGSAAN SG. ENTULANG",KEBANGSAAN,,MIRI,Sarawak,14
+"SEKOLAH KEBANGSAAN PUJUT CORNER",KEBANGSAAN,,MIRI,Sarawak,14
+"SEKOLAH KEBANGSAAN PAJAR SEJINGKAT",KEBANGSAAN,,KUCHING,Sarawak,14
+"POLITEKNIK KUCHING SARAWAK",POLITEKNIK,,KUCHING,Sarawak,14
+"SEKOLAH KEBANGSAAN BANDAR LIMBANG",KEBANGSAAN,,LIMBANG,Sarawak,13
+"SEKOLAH KEBANGSAAN DATO TRAOH MUARA TUANG",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,13
+"SEKOLAH MENENGAH KEBANGSAAN AGAMA LIMBANG",SMK AGAMA,,LIMBANG,Sarawak,13
+"SEKOLAH JENIS KEBANGSAAN (CINA) HOCK LAM",JENIS KEBANGSAAN (C),,KAPIT,Sarawak,13
+"KOLEJ VOKASIONAL BETONG",KOLEJ VOKASIONAL,,BETONG,Sarawak,13
+"SEKOLAH JENIS KEBANGSAAN (CINA) NORTH",JENIS KEBANGSAAN (C),,MIRI,Sarawak,13
+"SEKOLAH KEBANGSAAN MUKAH",KEBANGSAAN,,MUKAH,Sarawak,13
+"SEKOLAH KEBANGSAAN ENCIK BUYONG",KEBANGSAAN,,KUCHING,Sarawak,13
+"KOLEJ VOKASIONAL SIBU",KOLEJ VOKASIONAL,,SIBU,Sarawak,13
+"SEKOLAH KEBANGSAAN BUNTAL",KEBANGSAAN,,KUCHING,Sarawak,13
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA MIRI",JENIS KEBANGSAAN (C),,MIRI,Sarawak,13
+"SEKOLAH MENENGAH KEBANGSAAN KATIBAS",SM KEBANGSAAN,,SONG,Sarawak,13
+"SEKOLAH KEBANGSAAN NANGA SELANGAU",KEBANGSAAN,,SIBU,Sarawak,13
+"SEKOLAH KEBANGSAAN LONG KESSEH",KEBANGSAAN,,MARUDI,Sarawak,13
+"SEKOLAH JENIS KEBANGSAAN (CINA) SU LAI",JENIS KEBANGSAAN (C),,SIBU,Sarawak,13
+"SEKOLAH KEBANGSAAN SERIAN",KEBANGSAAN,,SERIAN,Sarawak,12
+"SEKOLAH MENENGAH KEBANGSAAN KWONG HUA MIDDLE",SM KEBANGSAAN,,SIBU,Sarawak,12
+"SEKOLAH KEBANGSAAN CATHOLIC ENGLISH",KEBANGSAAN,,KUCHING,Sarawak,12
+"SEKOLAH KEBANGSAAN LIMBANG",KEBANGSAAN,,LIMBANG,Sarawak,12
+"SEKOLAH KEBANGSAAN METHODIST ANGLO-CHINESE",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,12
+"SEKOLAH KEBANGSAAN ORANG KAYA MOHAMMAD",KEBANGSAAN,,BINTULU,Sarawak,12
+"SEKOLAH KEBANGSAAN SIBURAN BATU",KEBANGSAAN,,KUCHING,Sarawak,12
+"SEKOLAH KEBANGSAAN RIAM BATU DUA",KEBANGSAAN,,MIRI,Sarawak,12
+"SEKOLAH KEBANGSAAN PUSAT LAWAS",KEBANGSAAN,,LAWAS,Sarawak,12
+"SEKOLAH KEBANGSAAN ST TERESA",KEBANGSAAN,,BAU,Sarawak,12
+"SEKOLAH KEBANGSAAN LONG SEPILING",KEBANGSAAN,,MARUDI,Sarawak,12
+"SEKOLAH JENIS KEBANGSAAN (CINA) SAM HAP HIN",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,12
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA NO. 5",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,12
+"SEKOLAH KEBANGSAAN GOEBILT",KEBANGSAAN,,KUCHING,Sarawak,11
+"SEKOLAH KEBANGSAAN ST AUGUSTINE BETONG",KEBANGSAAN,,BETONG,Sarawak,11
+"SEKOLAH KEBANGSAAN METHODIST",KEBANGSAAN,,KAPIT,Sarawak,11
+"SEKOLAH KEBANGSAAN KAPIT",KEBANGSAAN,,KAPIT,Sarawak,11
+"TENBY INTERNATIONAL SCHOOL , MIRI",INTERNATIONAL SCHOOL,,MIRI,Sarawak,11
+"SEKOLAH KEBANGSAAN KUALA BARAM II",KEBANGSAAN,,MIRI,Sarawak,11
+"SEKOLAH JENIS KEBANGSAAN (CINA) SIONG BOON",JENIS KEBANGSAAN (C),,BINTULU,Sarawak,11
+"SEKOLAH KEBANGSAAN ARU BARU",KEBANGSAAN,,SUNDAR,Sarawak,11
+"SEKOLAH JENIS KEBANGSAAN (CINA) TAMAN RAJANG",JENIS KEBANGSAAN (C),,SIBU,Sarawak,11
+"SEKOLAH KEBANGSAAN NANGA MEDAMIT",KEBANGSAAN,,LIMBANG,Sarawak,11
+"SEKOLAH KEBANGSAAN BATU KELING",KEBANGSAAN,,BELAGA,Sarawak,11
+"SEKOLAH KEBANGSAAN RAKYAT TUPONG",KEBANGSAAN,,KUCHING,Sarawak,11
+"SEKOLAH KEBANGSAAN SACRED HEART SIBU",KEBANGSAAN,,SIBU,Sarawak,11
+"SEKOLAH KEBANGSAAN TABUAN JAYA",KEBANGSAAN,,KUCHING,Sarawak,10
+"SEKOLAH JENIS KEBANGSAAN (CINA) BINTAWA",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,10
+"SEKOLAH KEBANGSAAN ABANG ABDUL KADIR",KEBANGSAAN,,BETONG,Sarawak,10
+"SEKOLAH KEBANGSAAN TEMENGGONG",KEBANGSAAN,,KUCHING,Sarawak,10
+"CATHOLIC HIGH SCHOOL",PRIVATE SCHOOL,,SIBU,Sarawak,10
+"SEKOLAH KEBANGSAAN PULAU MELAYU",KEBANGSAAN,,MIRI,Sarawak,10
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG SAN MIRI",JENIS KEBANGSAAN (C),,MIRI,Sarawak,10
+"SEKOLAH KEBANGSAAN KPG BANYOK",KEBANGSAAN,,SIBU,Sarawak,10
+"KOLEJ VOKASIONAL MATANG",KOLEJ VOKASIONAL,,KUCHING,Sarawak,10
+"SEKOLAH KEBANGSAAN MERPATI JEPANG",KEBANGSAAN,,KUCHING,Sarawak,10
+"SEKOLAH KEBANGSAAN PULO",KEBANGSAAN,,KUCHING,Sarawak,10
+"SEKOLAH KEBANGSAAN SEMARIANG",KEBANGSAAN,,KUCHING,Sarawak,10
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA, BINTULU",JENIS KEBANGSAAN (C),,BINTULU,Sarawak,10
+"SEKOLAH KEBANGSAAN MATU BARU",KEBANGSAAN,,KUCHING,Sarawak,10
+"SEKOLAH KEBANGSAAN RAMPANGI",KEBANGSAAN,,KUCHING,Sarawak,10
+"SEKOLAH KEBANGSAAN HAJI KELALI SEMERA",KEBANGSAAN,,ASAJAYA,Sarawak,10
+"SEKOLAH KEBANGSAAN ULU SUNGAI SALIM",KEBANGSAAN,,SIBU,Sarawak,10
+"SEKOLAH JENIS KEBANGSAAN (CINA) SU MING",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,10
+"SEKOLAH KEBANGSAAN GOOD SHEPHERD",KEBANGSAAN,,MARUDI,Sarawak,10
+"SEKOLAH KEBANGSAAN ABANG AING",KEBANGSAAN,,SRI AMAN,Sarawak,10
+"SEKOLAH KEBANGSAAN KORAN",KEBANGSAAN,,SERIAN,Sarawak,10
+"SEKOLAH KEBANGSAAN SEDC",KEBANGSAAN,,SIBU,Sarawak,10
+"SEKOLAH KEBANGSAAN SARIKEI",KEBANGSAAN,,SARIKEI,Sarawak,10
+"SEKOLAH KEBANGSAAN BELADIN",KEBANGSAAN,,PUSA,Sarawak,9
+"SEKOLAH JENIS KEBANGSAAN (CINA) KAI MING",JENIS KEBANGSAAN (C),,BINTULU,Sarawak,9
+"SEKOLAH KEBANGSAAN ST MARTIN KOTA SAMARAHAN",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,9
+"SEKOLAH KEBANGSAAN ULU SEGAN",KEBANGSAAN,,BINTULU,Sarawak,9
+"SEKOLAH KEBANGSAAN ST PATRICK MUKAH",KEBANGSAAN,,MUKAH,Sarawak,9
+"SEKOLAH KEBANGSAAN ABANG KADIR GEDONG",KEBANGSAAN,,SIMUNJAN,Sarawak,9
+"SEKOLAH KEBANGSAAN BELURU CENTRAL",KEBANGSAAN,,MIRI,Sarawak,9
+"SEKOLAH KEBANGSAAN ST MARY SIBU",KEBANGSAAN,,SIBU,Sarawak,9
+"SEKOLAH KEBANGSAAN BATU 10 JALAN OYA",KEBANGSAAN,,SIBU,Sarawak,9
+"SEKOLAH JENIS KEBANGSAAN (CINA) SOON HWA SUNDAR",JENIS KEBANGSAAN (C),,LAWAS,Sarawak,9
+"SEKOLAH KEBANGSAAN GARLAND",KEBANGSAAN,,KUCHING,Sarawak,9
+"SEKOLAH KEBANGSAAN SUNGAI SEBATU",KEBANGSAAN,,MARUDI,Sarawak,9
+"SEKOLAH KEBANGSAAN LUBOK ANTU",KEBANGSAAN,,LUBOK ANTU,Sarawak,9
+"SEKOLAH KEBANGSAAN ULU DARO",KEBANGSAAN,,DARO,Sarawak,9
+"SEKOLAH KEBANGSAAN MUARA TEBAS",KEBANGSAAN,,KUCHING,Sarawak,9
+"SEKOLAH KEBANGSAAN SACRED HEART KUCHING",KEBANGSAAN,,KUCHING,Sarawak,9
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HWA LIMBANG",JENIS KEBANGSAAN (C),,LIMBANG,Sarawak,8
+"SEKOLAH KEBANGSAAN SEMARANG",KEBANGSAAN,,PUSA,Sarawak,8
+"SEKOLAH KEBANGSAAN DATU PENGIRAN MOHAMAD",KEBANGSAAN,,OYA,Sarawak,8
+"SEKOLAH JENIS KEBANGSAAN (CINA) THIAN HUA",JENIS KEBANGSAAN (C),,SIBU,Sarawak,8
+"SEKOLAH KEBANGSAAN BELIAU ISA",KEBANGSAAN,,BEKENU,Sarawak,8
+"SEKOLAH KEBANGSAAN SIBU BANDARAN NO 2",JENIS KEBANGSAAN (C),,SIBU,Sarawak,8
+"SEKOLAH MENENGAH PEI MIN",PRIVATE SCHOOL,,MIRI,Sarawak,8
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SIMUNJAN",JENIS KEBANGSAAN (C),,SIMUNJAN,Sarawak,8
+"SEKOLAH KEBANGSAAN PAYA MEBI",KEBANGSAAN,,KUCHING,Sarawak,8
+"SEKOLAH KEBANGSAAN ST. CHRISTOPHER DEBAK",KEBANGSAAN,,DEBAK,Sarawak,8
+"SEKOLAH KEBANGSAAN KG. LUAK",KEBANGSAAN,,MIRI,Sarawak,8
+"SEKOLAH KEBANGSAAN TAMBIRAT",KEBANGSAAN,,ASAJAYA,Sarawak,8
+"SEKOLAH JENIS KEBANGSAAN (CINA) THIAN CHIN",JENIS KEBANGSAAN (C),,SIBU,Sarawak,8
+"SEKOLAH KEBANGSAAN TEBELU",KEBANGSAAN,,SEBUYAU,Sarawak,8
+"SEKOLAH KEBANGSAAN ABANG LEMAN",KEBANGSAAN,,KABONG,Sarawak,8
+"SEKOLAH KEBANGSAAN BATU TELLINGAI",KEBANGSAAN,,BATU NIAH,Sarawak,8
+"SEKOLAH MENENGAH KEBANGSAAN BATANG IGAN",SM KEBANGSAAN,,MUKAH,Sarawak,8
+"SEKOLAH JENIS KEBANGSAAN (CINA) SACRED HEART CHINESE",JENIS KEBANGSAAN (C),,SIBU,Sarawak,8
+"SEKOLAH KEBANGSAAN PASIR PANDAK",KEBANGSAAN,,KUCHING,Sarawak,8
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHIN NAM",JENIS KEBANGSAAN (C),,NIAH,Sarawak,8
+"SEKOLAH MENENGAH KEBANGSAAN NANGA DAP",SM KEBANGSAAN,,KANOWIT,Sarawak,8
+"SEKOLAH JENIS KEBANGSAAN (CINA) DUNG SANG",JENIS KEBANGSAAN (C),,SIBU,Sarawak,8
+"SEKOLAH KEBANGSAAN JALAN HAJI BAKI",KEBANGSAAN,,KUCHING,Sarawak,8
+"SEKOLAH KEBANGSAAN NANGA KESIT",KEBANGSAAN,,LUBOK ANTU,Sarawak,8
+"SEKOLAH KEBANGSAAN TANJUNG LATAP",KEBANGSAAN,,SIBU,Sarawak,8
+"SEKOLAH KEBANGSAAN DATUK AWANG UDIN",KEBANGSAAN,,MUKAH,Sarawak,7
+"SEKOLAH KEBANGSAAN TABUAN",KEBANGSAAN,,KUCHING,Sarawak,7
+"SEKOLAH KEBANGSAAN BATU LINTANG KUCHING SRI AMAN",KEBANGSAAN,,KUCHING,Sarawak,7
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA NO. 3",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,7
+"SEKOLAH KEBANGSAAN LONG BEDIAN",KEBANGSAAN,,MARUDI,Sarawak,7
+"SEKOLAH KEBANGSAAN MELAYU PUSAT",KEBANGSAAN,,LIMBANG,Sarawak,7
+"SEKOLAH KEBANGSAAN PARISH",KEBANGSAAN,,MUKAH,Sarawak,7
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA MARUDI",JENIS KEBANGSAAN (C),,MARUDI,Sarawak,7
+"SEKOLAH KEBANGSAAN GITA 2",KEBANGSAAN,,KUCHING,Sarawak,7
+"SEKOLAH KEBANGSAAN BATU 36",KEBANGSAAN,,SIBU,Sarawak,7
+"SEKOLAH KEBANGSAAN RPR BATU KAWA",KEBANGSAAN,,KUCHING,Sarawak,7
+"SEKOLAH KEBANGSAAN PARUN SUAN",KEBANGSAAN,,SERIAN,Sarawak,7
+"SEKOLAH KEBANGSAAN SUNGAI BULU/SENANGEH",KEBANGSAAN,,ASAJAYA,Sarawak,7
+"TUNKU PUTRA SCHOOL",PRIVATE SCHOOL,,KUCHING,Sarawak,7
+"SEKOLAH KEBANGSAAN ABANG AMIN",KEBANGSAAN,,BINTANGOR,Sarawak,7
+"SEKOLAH KEBANGSAAN MELUGU",KEBANGSAAN,,SRI AMAN,Sarawak,7
+"SEKOLAH KEBANGSAAN BAKO",KEBANGSAAN,,KUCHING,Sarawak,7
+"SEKOLAH KEBANGSAAN ST PIUS LONG SAN",KEBANGSAAN,,MARUDI,Sarawak,7
+"SEKOLAH KEBANGSAAN RAYANG",KEBANGSAAN,,SERIAN,Sarawak,7
+"SEKOLAH KEBANGSAAN LONG MOH",KEBANGSAAN,,MARUDI,Sarawak,7
+"SEKOLAH KEBANGSAAN SEMATAN",KEBANGSAAN,,SEMATAN,Sarawak,7
+"SEKOLAH KEBANGSAAN TEBAKANG",KEBANGSAAN,,TEBAKANG,Sarawak,7
+"SEKOLAH JENIS KEBANGSAAN (CINA) SEBIEW CHINESE",JENIS KEBANGSAAN (C),,BINTULU,Sarawak,7
+"SEKOLAH KEBANGSAAN TELAGA AIR",KEBANGSAAN,,KUCHING,Sarawak,7
+"SEKOLAH KEBANGSAAN ST LUKE",KEBANGSAAN,,SRI AMAN,Sarawak,7
+"Sekolah Rendah Kebangsaan Bagian",KEBANGSAAN,,TATAU,Sarawak,6
+"SEKOLAH JENIS KEBANGSAAN (CINA) SAM LAM",JENIS KEBANGSAAN (C),,SIBU,Sarawak,6
+"SEKOLAH KEBANGSAAN SAMPADI",KEBANGSAAN,,LUNDU,Sarawak,6
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BAU",JENIS KEBANGSAAN (C),,BAU,Sarawak,6
+"SEKOLAH KEBANGSAAN SEBAKO DARO",KEBANGSAAN,,DARO,Sarawak,6
+"SEKOLAH KEBANGSAAN BAWANG TIAN",KEBANGSAAN,,MATU,Sarawak,6
+"SEKOLAH KEBANGSAAN KENYALANG",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,6
+"SEKOLAH JENIS KEBANGSAAN (CINA) YUK HIN",JENIS KEBANGSAAN (C),,LIMBANG,Sarawak,6
+"SEKOLAH KEBANGSAAN SAMBIR",KEBANGSAAN,,ASAJAYA,Sarawak,6
+"SEKOLAH KEBANGSAAN BATU NIAH",KEBANGSAAN,,BATU NIAH,Sarawak,6
+"SEKOLAH JENIS KEBANGSAAN (CINA) YEE TING",JENIS KEBANGSAAN (C),,KANOWIT,Sarawak,6
+"SEKOLAH KEBANGSAAN KUALA AWANG",KEBANGSAAN,,LIMBANG,Sarawak,6
+"SEKOLAH KEBANGSAAN PENGELAYAN",KEBANGSAAN,,MARUDI,Sarawak,6
+"SEKOLAH KEBANGSAAN BATU KITANG",KEBANGSAAN,,KUCHING,Sarawak,6
+"SEKOLAH KEBANGSAAN ST AUGUSTINE BINTANGOR",KEBANGSAAN,,BINTANGOR,Sarawak,6
+"SEKOLAH KEBANGSAAN LAMBIR VILLAGE",KEBANGSAAN,,MIRI,Sarawak,6
+"SEKOLAH KEBANGSAAN PENGHULU BAYA MALLANG",KEBANGSAAN,,MARUDI,Sarawak,6
+"SEKOLAH KEBANGSAAN KAMPUNG PAHLAWAN",KEBANGSAAN,,LIMBANG,Sarawak,6
+"SEKOLAH KEBANGSAAN KG TELLIAN",KEBANGSAAN,,MUKAH,Sarawak,6
+"SEKOLAH KEBANGSAAN JLN.ONG TIANG SWEE",KEBANGSAAN,,KUCHING,Sarawak,6
+"SEKOLAH KEBANGSAAN LONG JEGAN",KEBANGSAAN,,MARUDI,Sarawak,6
+"SEKOLAH KEBANGSAAN LONG GANG",KEBANGSAAN,,BELAGA,Sarawak,6
+"SEKOLAH KEBANGSAAN LUMBA KUDA",KEBANGSAAN,,KUCHING,Sarawak,6
+"SEKOLAH KEBANGSAAN TANJONG APONG",KEBANGSAAN,,ASAJAYA,Sarawak,6
+"SEKOLAH KEBANGSAAN COMBINED",KEBANGSAAN,,KUCHING,Sarawak,6
+"SEKOLAH KEBANGSAAN MELANSAI",KEBANGSAAN,,SERIAN,Sarawak,6
+"SEKOLAH KEBANGSAAN ST PATRICK TANGGA",KEBANGSAAN,,SERIAN,Sarawak,6
+"SEKOLAH KEBANGSAAN PERBANDARAN SIBU NO. 4",JENIS KEBANGSAAN (C),,SIBU,Sarawak,6
+"SEKOLAH KEBANGSAAN KG BAHAGIA JAYA",KEBANGSAAN,,SIBU,Sarawak,6
+"SEKOLAH KEBANGSAAN KAMPUNG IGAN",KEBANGSAAN,,MUKAH,Sarawak,6
+"SEKOLAH KEBANGSAAN SUNGAI BA",KEBANGSAAN,,SIMUNJAN,Sarawak,6
+"SEKOLAH KEBANGSAAN JEMUKAN",KEBANGSAAN,,ASAJAYA,Sarawak,6
+"SEKOLAH KEBANGSAAN TATAU",KEBANGSAAN,,TATAU,Sarawak,6
+"SEKOLAH KEBANGSAAN LANDEH",KEBANGSAAN,,KUCHING,Sarawak,5
+"SEKOLAH KEBANGSAAN SUNGAI PINANG BAU",KEBANGSAAN,,BAU,Sarawak,5
+"SEKOLAH KEBANGSAAN LONG BEMANG",KEBANGSAAN,,MARUDI,Sarawak,5
+"SEKOLAH MENENGAH KEBANGSAAN CHUNG CHENG",SM KEBANGSAAN,,SIBU,Sarawak,5
+"SEKOLAH KEBANGSAAN ST JOHN BAU",KEBANGSAAN,,BAU,Sarawak,5
+"SEKOLAH JENIS KEBANGSAAN (CINA) TIONG HIN",JENIS KEBANGSAAN (C),,SIBU,Sarawak,5
+"SEKOLAH KEBANGSAAN ABANG GESA",KEBANGSAAN,,BELAWAI,Sarawak,5
+"SEKOLAH KEBANGSAAN SABENA",KEBANGSAAN,,DARO,Sarawak,5
+"SEKOLAH JENIS KEBANGSAAN (CINA) WAH MAN",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,5
+"SEKOLAH KEBANGSAAN TANJUNG PISANG SELANGKING",KEBANGSAAN,,SIMUNJAN,Sarawak,5
+"SEKOLAH KEBANGSAAN JALAN ARANG",KEBANGSAAN,,KUCHING,Sarawak,5
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BETONG",JENIS KEBANGSAAN (C),,BETONG,Sarawak,5
+"SEKOLAH KEBANGSAAN ST DAVID",KEBANGSAAN,,KUCHING,Sarawak,5
+"SEKOLAH KEBANGSAAN ST JAMES QUOP",KEBANGSAAN,,KUCHING,Sarawak,5
+"SEKOLAH KEBANGSAAN CAMPORAN",JENIS KEBANGSAAN (C),,DARO,Sarawak,5
+"SEKOLAH KEBANGSAAN SONG KHENG HAI",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,5
+"SEKOLAH KEBANGSAAN LAKSAMANA",KEBANGSAAN,,KUCHING,Sarawak,5
+"SEKOLAH KEBANGSAAN BATU EMPAT, LIMBANG",KEBANGSAAN,,LIMBANG,Sarawak,5
+"SEKOLAH KEBANGSAAN BUMIPUTERA",KEBANGSAAN,,LUNDU,Sarawak,5
+"SEKOLAH JENIS KEBANGSAAN (CINA) GUONG ANN",JENIS KEBANGSAAN (C),,SIBU,Sarawak,5
+"SEKOLAH KEBANGSAAN O K SELAIR",KEBANGSAAN,,MATU,Sarawak,5
+"SEKOLAH KEBANGSAAN KUALA TATAU",KEBANGSAAN,,TATAU,Sarawak,5
+"SEKOLAH KEBANGSAAN ABANG BUYUK",KEBANGSAAN,,BELAWAI,Sarawak,5
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BATU 10",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,5
+"SEKOLAH JENIS KEBANGSAAN (CINA) ST PAUL",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,5
+"SEKOLAH KEBANGSAAN ST ELIZABETH",KEBANGSAAN,,KUCHING,Sarawak,5
+"SEKOLAH KEBANGSAAN CARDINAL VAUGHAN",KEBANGSAAN,,SONG,Sarawak,5
+"SEKOLAH JENIS KEBANGSAAN (CINA) SU KWONG",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,5
+"SEKOLAH KEBANGSAAN NG MALONG",KEBANGSAAN,,SARATOK,Sarawak,5
+"SEKOLAH KEBANGSAAN STUNGGANG MELAYU",KEBANGSAAN,,LUNDU,Sarawak,5
+"SEKOLAH KEBANGSAAN MAJ GEN DATU IBRAHIM",KEBANGSAAN,,KUCHING,Sarawak,5
+"SEKOLAH KEBANGSAAN ABANG MAN",KEBANGSAAN,,SIMUNJAN,Sarawak,5
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SERIAN",JENIS KEBANGSAAN (C),,SERIAN,Sarawak,4
+"WOODLANDS INTERNATIONAL SCHOOL",INTERNATIONAL SCHOOL,,SIBU,Sarawak,4
+"SEKOLAH KEBANGSAAN SIBU BANDARAN NO 3",KEBANGSAAN,,SIBU,Sarawak,4
+"SEKOLAH KEBANGSAAN BATANG AI",KEBANGSAAN,,LUBOK ANTU,Sarawak,4
+"SEKOLAH KEBANGSAAN GEMUAN",KEBANGSAAN,,BINTANGOR,Sarawak,4
+"SEKOLAH KEBANGSAAN PENOM",KEBANGSAAN,,SPAOH,Sarawak,4
+"SEKOLAH KEBANGSAAN ABANG GALAU",KEBANGSAAN,,TANJUNG MANIS,Sarawak,4
+"SEKOLAH KEBANGSAAN ST RITA",KEBANGSAAN,,SIBU,Sarawak,4
+"SEKOLAH KEBANGSAAN ALL SAINTS PLAMAN NYABET",KEBANGSAAN,,SERIAN,Sarawak,4
+"SEKOLAH KEBANGSAAN TABUAN ULU",KEBANGSAAN,,KUCHING,Sarawak,4
+"SEKOLAH KEBANGSAAN SRI AMAN",KEBANGSAAN,,SRI AMAN,Sarawak,4
+"SEKOLAH KEBANGSAAN BALAI RINGIN",KEBANGSAAN,,SERIAN,Sarawak,4
+"SEKOLAH KEBANGSAAN MUNGGU BRINGIN",KEBANGSAAN,,SRI AMAN,Sarawak,4
+"SEKOLAH KEBANGSAAN ST ALPHONSUS",KEBANGSAAN,,JULAU,Sarawak,4
+"SEKOLAH KEBANGSAAN SOK",KEBANGSAAN,,DARO,Sarawak,4
+"SEKOLAH KEBANGSAAN PENDIDIKAN KHAS KUCHING",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,4
+"SEKOLAH KEBANGSAAN SG KEM BATU 18",KEBANGSAAN,,BINTULU,Sarawak,4
+"SEKOLAH KEBANGSAAN TARAT",KEBANGSAAN,,SERIAN,Sarawak,4
+"SEKOLAH KEBANGSAAN MATA PARANG",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,4
+"SEKOLAH JENIS KEBANGSAAN (CINA) KAI CHUNG",JENIS KEBANGSAAN (C),,BINTANGOR,Sarawak,4
+"SEKOLAH KEBANGSAAN RANTAU PANJANG KUCHING",KEBANGSAAN,,KUCHING,Sarawak,4
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SG TENGAH",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,4
+"SEKOLAH KEBANGSAAN OPAR",KEBANGSAAN,,BAU,Sarawak,4
+"SEKOLAH KEBANGSAAN PUSA",KEBANGSAAN,,BETONG,Sarawak,4
+"SEKOLAH KEBANGSAAN SEBANDI MATANG",KEBANGSAAN,,ASAJAYA,Sarawak,4
+"SEKOLAH KEBANGSAAN SEBUYAU/ENSENGGEI",KEBANGSAAN,,SIMUNJAN,Sarawak,4
+"SEKOLAH KEBANGSAAN MERANEK",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,4
+"SEKOLAH KEBANGSAAN NANGA NYIMOH",KEBANGSAAN,,SONG,Sarawak,4
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SIBU",JENIS KEBANGSAAN (C),,SIBU,Sarawak,4
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHIN HUA",JENIS KEBANGSAAN (C),,DALAT,Sarawak,4
+"SEKOLAH KEBANGSAAN KUALA NYALAU",KEBANGSAAN,,BINTULU,Sarawak,4
+"HOMESCHOOL",PRIVATE SCHOOL,,KUCHING,Sarawak,5
+"SEKOLAH KEBANGSAAN SG. BAKAS MIRI",KEBANGSAAN,,MIRI,Sarawak,4
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SEJIJAK",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,4
+"SEKOLAH KEBANGSAAN SG BUKIT BALAI",KEBANGSAAN,,SEBAUH,Sarawak,4
+"SEKOLAH KEBANGSAAN RANTAU DILANG",KEBANGSAAN,,KANOWIT,Sarawak,4
+"SEKOLAH KEBANGSAAN TAMBAK",KEBANGSAAN,,PUSA,Sarawak,4
+"SEKOLAH KEBANGSAAN RENTAP",KEBANGSAAN,,SARIKEI,Sarawak,4
+"SEKOLAH KEBANGSAAN RASO",KEBANGSAAN,,LUNDU,Sarawak,4
+"SEKOLAH KEBANGSAAN ULU DURIN KIBA",KEBANGSAAN,,SIBU,Sarawak,4
+"SEKOLAH KEBANGSAAN ABOK",KEBANGSAAN,,SRI AMAN,Sarawak,4
+"SEKOLAH KEBANGSAAN SEGONG",KEBANGSAAN,,BAU,Sarawak,4
+"SEKOLAH KEBANGSAAN SIANG-SIANG",KEBANGSAAN,,LAWAS,Sarawak,4
+"SEKOLAH MENENGAH AYER MANIS",PRIVATE SCHOOL,,SERIAN,Sarawak,4
+"SEKOLAH KEBANGSAAN SUNGAI TUAH",KEBANGSAAN,,KANOWIT,Sarawak,4
+"SEKOLAH KEBANGSAAN KG BARU BINTULU",KEBANGSAAN,,BINTULU,Sarawak,4
+"SEKOLAH KEBANGSAAN PODAM",KEBANGSAAN,,BAU,Sarawak,4
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA MATU",JENIS KEBANGSAAN (C),,MATU,Sarawak,3
+"SEKOLAH KEBANGSAAN RAMBUNGAN",KEBANGSAAN,,LUNDU,Sarawak,3
+"SEKOLAH KEBANGSAAN HUA HIN ENGLISH",KEBANGSAAN,,SIBU,Sarawak,3
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA ROBAN",JENIS KEBANGSAAN (C),,ROBAN,Sarawak,3
+"SEKOLAH KEBANGSAAN BANDAR BINTANGOR",KEBANGSAAN,,BINTANGOR,Sarawak,3
+"SEKOLAH JENIS KEBANGSAAN (CINA) KIEW NANG",JENIS KEBANGSAAN (C),,SIBU,Sarawak,3
+"SEKOLAH JENIS KEBANGSAAN (CINA) BULAT",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,3
+"SEKOLAH KEBANGSAAN PLAMAN BAKI / MENAUL",KEBANGSAAN,,SERIAN,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN BALLEH",SM KEBANGSAAN,,KAPIT,Sarawak,3
+"SEKOLAH KEBANGSAAN ENGKILILI NO. 1",KEBANGSAAN,,ENGKILILI,Sarawak,3
+"SEKOLAH KEBANGSAAN SUNDAR",KEBANGSAAN,,LAWAS,Sarawak,3
+"SEKOLAH KEBANGSAAN ST ANDREW KUCHING",KEBANGSAAN,,KUCHING,Sarawak,3
+"SEKOLAH KEBANGSAAN TEMBAWANG",KEBANGSAAN,,BAU,Sarawak,3
+"SEKOLAH KEBANGSAAN SERUMBU",KEBANGSAAN,,BAU,Sarawak,3
+"SEKOLAH KEBANGSAAN KUALA LAWAS",KEBANGSAAN,,LAWAS,Sarawak,3
+"SEKOLAH KEBANGSAAN KG EMPILA",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,3
+"SEKOLAH KEBANGSAAN LONG JEEH",KEBANGSAAN,,MARUDI,Sarawak,3
+"SEKOLAH KEBANGSAAN NANGA STRAS",KEBANGSAAN,,BINTANGOR,Sarawak,3
+"SEKOLAH KEBANGSAAN KG MELAYU",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,3
+"SEKOLAH KEBANGSAAN KG TANJUNG TUANG",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,3
+"SEKOLAH KEBANGSAAN KAMPUNG SAU",KEBANGSAAN,,MUKAH,Sarawak,3
+"SEKOLAH JENIS KEBANGSAAN (CINA) NANG SANG",JENIS KEBANGSAAN (C),,SIBU,Sarawak,3
+"SEKOLAH KEBANGSAAN ST DOMINIC PICHIN",KEBANGSAAN,,SERIAN,Sarawak,3
+"SEKOLAH KEBANGSAAN NANGA SEMAH",KEBANGSAAN,,DARO,Sarawak,3
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SG JERNANG",JENIS KEBANGSAAN (C),,KOTA SAMARAHAN,Sarawak,3
+"SEKOLAH KEBANGSAAN MALUDAM",KEBANGSAAN,,PUSA,Sarawak,3
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHENG HUA",JENIS KEBANGSAAN (C),,KANOWIT,Sarawak,3
+"SEKOLAH KEBANGSAAN SUNGAI DUAN",KEBANGSAAN,,MUKAH,Sarawak,3
+"SEKOLAH KEBANGSAAN RUMAH TINGGI",KEBANGSAAN,,BEKENU,Sarawak,3
+"SEKOLAH KEBANGSAAN PRIDAN",KEBANGSAAN,,SERIAN,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN BARIO",SM KEBANGSAAN,,MARUDI,Sarawak,3
+"SEKOLAH KEBANGSAAN DATUK BANDAR",KEBANGSAAN,,DEBAK,Sarawak,3
+"SEKOLAH JENIS KEBANGSAAN (CINA) MINAR",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,3
+"SEKOLAH KEBANGSAAN SERASOT",KEBANGSAAN,,BAU,Sarawak,3
+"SEKOLAH KEBANGSAAN ST PETER SARATOK",KEBANGSAAN,,SARATOK,Sarawak,3
+"SEKOLAH JENIS KEBANGSAAN SUNGAI JAONG MARUDI",JENIS KEBANGSAAN (C),,MARUDI,Sarawak,3
+"SEKOLAH KEBANGSAAN SEMOP",KEBANGSAAN,,DARO,Sarawak,3
+"SEKOLAH KEBANGSAAN MEDANG",KEBANGSAAN,,PUSA,Sarawak,3
+"SEKOLAH KEBANGSAAN ST DUNSTAN SRI AMAN",KEBANGSAAN,,SRI AMAN,Sarawak,3
+"SEKOLAH JENIS KEBANGSAAN (CINA) TUKAU",JENIS KEBANGSAAN (C),,MIRI,Sarawak,3
+"SEKOLAH KEBANGSAAN RUMAH RANGGONG",KEBANGSAAN,,NIAH,Sarawak,3
+"SEKOLAH KEBANGSAAN ST MATTHEW SEKUAU",KEBANGSAAN,,SIBU,Sarawak,3
+"SEKOLAH KEBANGSAAN DESA LAVANG",KEBANGSAAN,,BINTULU,Sarawak,3
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA MUSI",JENIS KEBANGSAAN (C),,BAU,Sarawak,3
+"SEKOLAH KEBANGSAAN KG TANAM",KEBANGSAAN,,DALAT,Sarawak,3
+"SEKOLAH KEBANGSAAN SELEPONG",KEBANGSAAN,,SRI AMAN,Sarawak,3
+"SEKOLAH KEBANGSAAN MUNGGU LALLANG",KEBANGSAAN,,SIMUNJAN,Sarawak,3
+"SEKOLAH KEBANGSAAN ORANG KAYA TEMENGGONG TANDUK",KEBANGSAAN,,SARATOK,Sarawak,3
+"SEKOLAH KEBANGSAAN LIMPAKI",KEBANGSAAN,,LIMBANG,Sarawak,3
+"SEKOLAH KEBANGSAAN BUKIT BATU",KEBANGSAAN,,LIMBANG,Sarawak,3
+"SEKOLAH KEBANGSAAN STUNGKOR",KEBANGSAAN,,LUNDU,Sarawak,3
+"SEKOLAH KEBANGSAAN TIGA KAMPUNG",KEBANGSAAN,,LIMBANG,Sarawak,3
+"SEKOLAH KEBANGSAAN MOYAN LAUT",KEBANGSAAN,,ASAJAYA,Sarawak,3
+"SEKOLAH KEBANGSAAN ENGKUDU",KEBANGSAAN,,SARATOK,Sarawak,3
+"SEKOLAH KEBANGSAAN UMA BAWANG",KEBANGSAAN,,LONG LAMA,Sarawak,3
+"SEKOLAH KEBANGSAAN NANGA SEMAWANG",KEBANGSAAN,,JULAU,Sarawak,3
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SYN-SAN-TU",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,3
+"SEKOLAH KEBANGSAAN PENAKUP ULU",KEBANGSAAN,,MUKAH,Sarawak,3
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SIBURAN",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,3
+"SEKOLAH KEBANGSAAN ST ALBAN",KEBANGSAAN,,KUCHING,Sarawak,3
+"SEKOLAH KEBANGSAAN ULU ENTAIH",KEBANGSAAN,,PAKAN,Sarawak,3
+"SEKOLAH KEBANGSAAN ULU ROBAN",KEBANGSAAN,,ROBAN,Sarawak,3
+"SEKOLAH KEBANGSAAN TEDUNGAN (BAMBANGAN)",KEBANGSAAN,,LIMBANG,Sarawak,3
+"SEKOLAH KEBANGSAAN KAMPUNG TEH",KEBANGSAAN,,MUKAH,Sarawak,3
+"SEKOLAH KEBANGSAAN PENGHULU ANDIN",KEBANGSAAN,,SARIKEI,Sarawak,3
+"SEKOLAH KEBANGSAAN BABANG",KEBANGSAAN,,SARATOK,Sarawak,3
+"SEKOLAH KEBANGSAAN PUNANG",KEBANGSAAN,,LAWAS,Sarawak,3
+"SEKOLAH KEBANGSAAN EMPEROH JAMBU",KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN NG BANGKIT",KEBANGSAAN,,SONG,Sarawak,2
+"SEKOLAH KEBANGSAAN ST STEPHEN ( M )",KEBANGSAAN,,BAU,Sarawak,2
+"SEKOLAH KEBANGSAAN NANGA JIH",KEBANGSAAN,,KANOWIT,Sarawak,2
+"SEKOLAH KEBANGSAAN SG RASAU",KEBANGSAAN,,DALAT,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SIBUTI",JENIS KEBANGSAAN (C),,BEKENU,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BINTULU 2",JENIS KEBANGSAAN (C),,BINTULU,Sarawak,2
+"SEKOLAH KEBANGSAAN KG BARU KOTA SAMARAHAN",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,2
+"SEKOLAH KEBANGSAAN PUAK",KEBANGSAAN,,BAU,Sarawak,2
+"SEKOLAH KEBANGSAAN HAJI BUJANG RANGAWAN PUTIN",KEBANGSAAN,,ASAJAYA,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BATU 7",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN ASAJAYA ULU",KEBANGSAAN,,ASAJAYA,Sarawak,2
+"SEKOLAH KEBANGSAAN JA'IE",KEBANGSAAN,,ASAJAYA,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BALINGIAN",JENIS KEBANGSAAN (C),,BALINGIAN,Sarawak,2
+"SEKOLAH KEBANGSAAN SANGAN IBAN",KEBANGSAAN,,TATAU BINTULU,Sarawak,2
+"SEKOLAH KEBANGSAAN NANGA TUTUS",KEBANGSAAN,,SIBU,Sarawak,2
+"SEKOLAH KEBANGSAAN KG GAYU",KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN PATUNG",KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BATU 15",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) SG APONG",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) POI YUK",JENIS KEBANGSAAN (C),,DALAT,Sarawak,2
+"SEKOLAH KEBANGSAAN BEKENU",KEBANGSAAN,,BEKENU,Sarawak,2
+"SEKOLAH KEBANGSAAN ULU MERADONG",KEBANGSAAN,,BINTANGOR,Sarawak,2
+"SEKOLAH KEBANGSAAN BIAWAK",KEBANGSAAN,,LUNDU,Sarawak,2
+"SEKOLAH KEBANGSAAN PENGARAH ENTERI",KEBANGSAAN,,MARUDI,Sarawak,2
+"SEKOLAH KEBANGSAAN LONG TUKON",KEBANGSAAN,,LAWAS,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) KIANG HIN",JENIS KEBANGSAAN (C),,SIBU,Sarawak,2
+"SEKOLAH KEBANGSAAN LUBOK NIBONG MARUDI",KEBANGSAAN,,MARUDI,Sarawak,2
+"SEKOLAH KEBANGSAAN LELA PAHLAWAN",KEBANGSAAN,,LINGGA,Sarawak,2
+"SEKOLAH KEBANGSAAN ENGKABANG",KEBANGSAAN,,ROBAN,Sarawak,2
+"SEKOLAH KEBANGSAAN NANGA DAYU",KEBANGSAAN,,JULAU,Sarawak,2
+"SEKOLAH KEBANGSAAN SUPA",KEBANGSAAN,,SPAOH,Sarawak,2
+"SEKOLAH KEBANGSAAN KERANGAN",KEBANGSAAN,,LAWAS,Sarawak,2
+"SEKOLAH KEBANGSAAN LONG LAMEI",KEBANGSAAN,,MARUDI,Sarawak,2
+"SEKOLAH KEBANGSAAN TANAH MERAH",KEBANGSAAN,,SERIAN,Sarawak,2
+"SEKOLAH KEBANGSAAN SUNGAI KUT TENGAH DALAT",KEBANGSAAN,,DALAT,Sarawak,2
+"SEKOLAH KEBANGSAAN PENDAM",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,2
+"SEKOLAH KEBANGSAAN LONG LUPING",KEBANGSAAN,,LAWAS,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) SING MING SIBU",JENIS KEBANGSAAN (C),,SIBU,Sarawak,2
+"SEKOLAH KEBANGSAAN ST FRANCIS XAVIER, KANOWIT",KEBANGSAAN,,KANOWIT,Sarawak,2
+"SEKOLAH KEBANGSAAN LONG LAPOK",KEBANGSAAN,,MARUDI,Sarawak,2
+"SEKOLAH KEBANGSAAN TEBEDU",KEBANGSAAN,,TEBEDU,Sarawak,2
+"SEKOLAH KEBANGSAAN TEMUDOK, AWIK",KEBANGSAAN,,SARATOK,Sarawak,2
+"SEKOLAH KEBANGSAAN BATU WONG",KEBANGSAAN,,SIBU,Sarawak,2
+"SEKOLAH KEBANGSAAN RIDAN",KEBANGSAAN,,LUBOK ANTU,Sarawak,2
+"SEKOLAH KEBANGSAAN ULU LUBAI",KEBANGSAAN,,LIMBANG,Sarawak,2
+"SEKOLAH KEBANGSAAN ULU SATAP",KEBANGSAAN,,BEKENU,Sarawak,2
+"SEKOLAH KEBANGSAAN JANGKAR",KEBANGSAAN,,LUNDU,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) MING SHING",JENIS KEBANGSAAN (C),,BINTANGOR,Sarawak,2
+"SEKOLAH KEBANGSAAN GROGO",KEBANGSAAN,,BAU,Sarawak,2
+"SEKOLAH KEBANGSAAN TUI",KEBANGSAAN,,PUSA,Sarawak,2
+"SEKOLAH KEBANGSAAN KG BUNGAN",KEBANGSAAN,,DALAT,Sarawak,2
+"SEKOLAH KEBANGSAAN GEMANG",KEBANGSAAN,,SERIAN,Sarawak,2
+"SEKOLAH KEBANGSAAN SAINT ANNE",KEBANGSAAN,,SARIKEI,Sarawak,2
+"KIDURONG INTERNATIONAL SCHOOL",INTERNATIONAL SCHOOL,,BINTULU,Sarawak,2
+"SEKOLAH KEBANGSAAN ENGKILILI NO.2",KEBANGSAAN,,ENGKILILI,Sarawak,2
+"SEKOLAH KEBANGSAAN BATU 15",KEBANGSAAN,,SIBU,Sarawak,2
+"SEKOLAH KEBANGSAAN SAYED OTHMAN",KEBANGSAAN,,MIRI,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA PENDING",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN SEBAUH",KEBANGSAAN,,SEBAUH,Sarawak,2
+"SEKOLAH KEBANGSAAN LONG SEGAHAM",KEBANGSAAN,,BELAGA,Sarawak,2
+"SEKOLAH KEBANGSAAN KG. BERAYA",KEBANGSAAN,,MIRI,Sarawak,2
+"SEKOLAH KEBANGSAAN NANGA PEDAI",KEBANGSAAN,,KANOWIT,Sarawak,2
+"SEKOLAH KEBANGSAAN MENUANG",KEBANGSAAN,,LIMBANG,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) MIN SYN SARATOK",JENIS KEBANGSAAN (C),,SARATOK,Sarawak,2
+"SEKOLAH KEBANGSAAN ST JOHN MANTUNG",KEBANGSAAN,,SERIAN,Sarawak,2
+"SEKOLAH KEBANGSAAN ATAS",KEBANGSAAN,,BAU,Sarawak,2
+"SEKOLAH KEBANGSAAN SERABANG",KEBANGSAAN,,PUSA,Sarawak,2
+"SEKOLAH KEBANGSAAN SKIBANG",KEBANGSAAN,,BAU,Sarawak,2
+"SEKOLAH KEBANGSAAN MUHIBBAH",KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN LONG LAPUT",KEBANGSAAN,,MARUDI,Sarawak,2
+"SEKOLAH KEBANGSAAN SEKAAN KECHIL",KEBANGSAAN,,MATU,Sarawak,2
+"SEKOLAH KEBANGSAAN BAKONG",KEBANGSAAN,,SRI AMAN,Sarawak,2
+"SEKOLAH SERI CEMERLANG",PRIVATE SCHOOL,,KUCHING,Sarawak,2
+"POLITEKNIK MUKAH SARAWAK",POLITEKNIK,,MUKAH,Sarawak,2
+"SEKOLAH KEBANGSAAN PESANG BEGU",KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN GRAN/STUMBIN",KEBANGSAAN,,SRI AMAN,Sarawak,2
+"SEKOLAH KEBANGSAAN LABANG",KEBANGSAAN,,SEBAUH,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) KEE TEE",JENIS KEBANGSAAN (C),,MARUDI,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA STAPOK",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG CHENG",JENIS KEBANGSAAN (C),,SIBU,Sarawak,2
+"SEKOLAH KEBANGSAAN SUAI 1",KEBANGSAAN,,BATU NIAH,Sarawak,2
+"SEKOLAH KEBANGSAAN NG SEGENOK",KEBANGSAAN,,KAPIT,Sarawak,2
+"SEKOLAH KEBANGSAAN BUKIT LUBA",KEBANGSAAN,,LIMBANG,Sarawak,2
+"SEKOLAH KEBANGSAAN ST BERNARD DALAT",KEBANGSAAN,,DALAT,Sarawak,2
+"SEKOLAH KEBANGSAAN SALAK",KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HIEN",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,2
+"SEKOLAH KEBANGSAAN PANTU",KEBANGSAAN,,SRI AMAN,Sarawak,2
+"SEKOLAH KEBANGSAAN MENTU TAPU",KEBANGSAAN,,SERIAN,Sarawak,2
+"SEKOLAH KEBANGSAAN TANJONG",KEBANGSAAN,,LIMBANG,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA KIM CHOO SENG",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SG TAPANG BT KAWA",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN RANTAU KEMIDING",KEBANGSAAN,,KANOWIT,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG SING",JENIS KEBANGSAAN (C),,SIBU,Sarawak,2
+"SEKOLAH KEBANGSAAN RANTAU PANJANG SIBU",KEBANGSAAN,,SIBU,Sarawak,2
+"SEKOLAH KEBANGSAAN KEM PAKIT",KEBANGSAAN,,SRI AMAN,Sarawak,2
+"SEKOLAH KEBANGSAAN OYAN TENGAH",KEBANGSAAN,,KAPIT,Sarawak,2
+"SEKOLAH KEBANGSAAN SG LADONG",KEBANGSAAN,,SIMUNJAN,Sarawak,2
+"SEKOLAH RENDAH SEKIM LAMBER",PRIVATE SCHOOL,,MIRI,Sarawak,2
+"SEKOLAH KEBANGSAAN KELAWIT",KEBANGSAAN,,TATAU,Sarawak,2
+"SEKOLAH KEBANGSAAN TUNGKAH MELAYU",KEBANGSAAN,,SIMUNJAN,Sarawak,2
+"SEKOLAH KEBANGSAAN BAU",KEBANGSAAN,,BAU,Sarawak,2
+"SEKOLAH KEBANGSAAN SPAOH",KEBANGSAAN,,BETONG,Sarawak,2
+"SEKOLAH KEBANGSAAN PENGHULU IMBAN",KEBANGSAAN,,SIBU,Sarawak,2
+"SEKOLAH KEBANGSAAN SUNGAI ARUS LUMUT",KEBANGSAAN,,SIMUNJAN,Sarawak,2
+"SEKOLAH KEBANGSAAN KG. BAKAM",KEBANGSAAN,,MIRI,Sarawak,2
+"SEKOLAH KEBANGSAAN LONG SEBANGAN",KEBANGSAAN,,LAWAS,Sarawak,2
+"SEKOLAH KEBANGSAAN ULU BINATANG",KEBANGSAAN,,BINTANGOR,Sarawak,2
+"SEKOLAH KEBANGSAAN SPINANG",KEBANGSAAN,,PUSA,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SINIAWAN",JENIS KEBANGSAAN (C),,BAU,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA TATAU",JENIS KEBANGSAAN (C),,TATAU,Sarawak,2
+"SEKOLAH KEBANGSAAN ST PHILIP BUGU",KEBANGSAAN,,SERIAN,Sarawak,2
+"SEKOLAH KEBANGSAAN RUMAH MENTALI",KEBANGSAAN,,NIAH,Sarawak,2
+"SEKOLAH KEBANGSAAN RANCANGAN SEPUPOK",KEBANGSAAN,,NIAH,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BATU 32",JENIS KEBANGSAAN (C),,SERIAN,Sarawak,2
+"SEKOLAH KEBANGSAAN NANGA POI",KEBANGSAAN,,KANOWIT,Sarawak,2
+"SEKOLAH KEBANGSAAN BATU DANAU",KEBANGSAAN,,LIMBANG,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) MING TEE",JENIS KEBANGSAAN (C),,BINTANGOR,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA LUNDU",JENIS KEBANGSAAN (C),,LUNDU,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) GUONG MING",JENIS KEBANGSAAN (C),,SIBU,Sarawak,2
+"SEKOLAH KEBANGSAAN SG UD",KEBANGSAAN,,DALAT,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHEE MUNG",JENIS KEBANGSAAN (C),,BATU NIAH,Sarawak,2
+"SEKOLAH KEBANGSAAN ASAJAYA LAUT",KEBANGSAAN,,ASAJAYA,Sarawak,2
+"SEKOLAH KEBANGSAAN ST SWITHUN",KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN LUBOK IPOH",KEBANGSAAN,,SONG,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA UNDOP",JENIS KEBANGSAAN (C),,SRI AMAN,Sarawak,2
+"SEKOLAH KEBANGSAAN NANGA BUKU",KEBANGSAAN,,PAKAN,Sarawak,2
+"SEKOLAH KEBANGSAAN NANGA MACHAN",KEBANGSAAN,,KANOWIT,Sarawak,2
+"SEKOLAH KEBANGSAAN BINYU",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN HIJRAH BADONG",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH KEBANGSAAN JAWA",KEBANGSAAN,,SARIKEI,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) YONG CHENG",JENIS KEBANGSAAN (C),,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN SG BADENGAN",KEBANGSAAN,,MUKAH,Sarawak,1
+"SEKOLAH KEBANGSAAN KG JEBUNGAN",KEBANGSAAN,,MUKAH,Sarawak,1
+"SEKOLAH KEBANGSAAN SG. TISANG",KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH KEBANGSAAN ULU MERAPOK",KEBANGSAAN,,LAWAS,Sarawak,1
+"SEKOLAH KEBANGSAAN PENDIDIKAN KHAS",KEBANGSAAN,,MIRI,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) TAPAH",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SG.TAPANG",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SG. LUBAK",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN SEREMBANG",KEBANGSAAN,,SPAOH,Sarawak,1
+"SEKOLAH KEBANGSAAN RITUH",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA MERURUN",KEBANGSAAN,,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN AWAT-AWAT",KEBANGSAAN,,LAWAS,Sarawak,1
+"SEKOLAH KEBANGSAAN TRINGGUS",KEBANGSAAN,,BAU,Sarawak,1
+"SEKOLAH KEBANGSAAN ST MICHAEL PLASSU",KEBANGSAAN,,ROBAN,Sarawak,1
+"SEKOLAH KEBANGSAAN IJOK",KEBANGSAAN,,ENGKILILI,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG TUMA",KEBANGSAAN,,LAWAS,Sarawak,1
+"SEKOLAH KEBANGSAAN STOH",KEBANGSAAN,,LUNDU,Sarawak,1
+"SEKOLAH KEBANGSAAN LEPONG AJAI",KEBANGSAAN,,MIRI,Sarawak,1
+"POLITEKNIK METRO BETONG",POLITEKNIK,,BETONG,Sarawak,1
+"SEKOLAH KEBANGSAAN NG MELUAN",KEBANGSAAN,,KAPIT,Sarawak,1
+"SEKOLAH KEBANGSAAN BERADEK",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG URUN",KEBANGSAAN,,BELAGA,Sarawak,1
+"SEKOLAH KEBANGSAAN ST ALBAN ,DURAS",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN ST RAYMOND MUJAT",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN SG STUTONG",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN SG BAWANG",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN KPG. BUDA",KEBANGSAAN,,SPAOH,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA MELUAN",KEBANGSAAN,,JULAU,Sarawak,1
+"SEKOLAH KEBANGSAAN PATI",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN MERAKAI",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN ISSU/BANGAT",KEBANGSAAN,,BETONG,Sarawak,1
+"SEKOLAH KEBANGSAAN LUBOK BEMBAN",KEBANGSAAN,,MUKAH,Sarawak,1
+"SEKOLAH KEBANGSAAN PAKU CENTRAL",KEBANGSAAN,,SPAOH,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHIH MONG",JENIS KEBANGSAAN (C),,KANOWIT,Sarawak,1
+"SEKOLAH KEBANGSAAN ASSUN",KEBANGSAAN,,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN BAOH ULU",KEBANGSAAN,,DALAT,Sarawak,1
+"SEKOLAH KEBANGSAAN KALAKA CENTRAL",KEBANGSAAN,,SARATOK,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA ENGKAMOP",KEBANGSAAN,,JULAU,Sarawak,1
+"SEKOLAH KEBANGSAAN ST MARK SIBU",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN TANG LAPADAN",KEBANGSAAN,,LAWAS,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA JU",KEBANGSAAN,,JULAU,Sarawak,1
+"KOLEJ TINGKATAN ENAM SARATOK",SM KEBANGSAAN,,SARATOK,Sarawak,1
+"SEKOLAH KEBANGSAAN TIAN MURUD",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN PAYAU",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN BUKIT KINYAU",KEBANGSAAN,,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN SAGENG",KEBANGSAAN,,SIMUNJAN,Sarawak,1
+"SEKOLAH KEBANGSAAN ULU MACHAN",KEBANGSAAN,,KANOWIT,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) SANG MING",JENIS KEBANGSAAN (C),,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN SELANJAN",KEBANGSAAN,,SRI AMAN,Sarawak,1
+"SEKOLAH KEBANGSAAN SG AMANG",KEBANGSAAN,,KAPIT,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG SOBENG",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN BATU LIMA",KEBANGSAAN,,LAWAS,Sarawak,1
+"SEKOLAH KEBANGSAAN PERPAT",KEBANGSAAN,,KABONG,Sarawak,1
+"SEKOLAH KEBANGSAAN SUNGAI POYAN",KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH KEBANGSAAN KPG PENASU DARO",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH KEBANGSAAN BATANG MARO",KEBANGSAAN,,KABONG,Sarawak,1
+"SEKOLAH KUMPULAN OSA",INTERNATIONAL SCHOOL,,BINTULU,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG ANAP",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) YOK MING",JENIS KEBANGSAAN (C),,KANOWIT,Sarawak,1
+"SEKOLAH KEBANGSAAN SG. BIAR",KEBANGSAAN,,MIRI,Sarawak,1
+"SEKOLAH KEBANGSAAN KAMPUNG BAKONG TERUS",KEBANGSAAN,,DALAT,Sarawak,1
+"SEKOLAH RENDAH SERI MULIA",PRIVATE SCHOOL,,MIRI,Sarawak,1
+"SEKOLAH KEBANGSAAN KG PENIPAH",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) ING GUONG",JENIS KEBANGSAAN (C),,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN SG MADOR",KEBANGSAAN,,BINTANGOR,Sarawak,1
+"SEKOLAH KEBANGSAAN KG SENAU",KEBANGSAAN,,OYA,Sarawak,1
+"SEKOLAH KEBANGSAAN KG BARU KAPIT",KEBANGSAAN,,KAPIT,Sarawak,1
+"SEKOLAH KEBANGSAAN TUNGKAH DAYAK",KEBANGSAAN,,SIMUNJAN,Sarawak,1
+"SEKOLAH KEBANGSAAN KG PENIBONG",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH KEBANGSAAN SG ANAK",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN MELABAN LUBOK ANTU",KEBANGSAAN,,LUBOK ANTU,Sarawak,1
+"SEKOLAH KEBANGSAAN ST PAUL ROBAN",KEBANGSAAN,,ROBAN,Sarawak,1
+"SEKOLAH KEBANGSAAN KEM SKRANG",KEBANGSAAN,,LUBOK ANTU,Sarawak,1
+"SEKOLAH KEBANGSAAN MERITAM",KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH KEBANGSAAN TAWAKAL SATAP",KEBANGSAAN,,BEKENU,Sarawak,1
+"SEKOLAH KEBANGSAAN TEMENGGONG KOH",KEBANGSAAN,,KAPIT,Sarawak,1
+"SEKOLAH KEBANGSAAN DIT",KEBANGSAAN,,DEBAK,Sarawak,1
+"SEKOLAH KEBANGSAAN SAKA",KEBANGSAAN,,BETONG,Sarawak,1
+"SEKOLAH KEBANGSAAN SEBEMBAN",KEBANGSAAN,,SPAOH,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) EK THEI",JENIS KEBANGSAAN (C),,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN KUALA MATU",KEBANGSAAN,,MATU,Sarawak,1
+"SEKOLAH KEBANGSAAN SUNGEI PASSIN",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH KEBANGSAAN MELABAN LIMBANG",KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH KEBANGSAAN ST BARNABAS BARU",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN GEORGE",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN SUBANG",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN TELOK GELAM",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH KEBANGSAAN SERABAK",KEBANGSAAN,,BAU,Sarawak,1
+"SEKOLAH KEBANGSAAN BAYANG",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH KEBANGSAAN TULAI",KEBANGSAAN,,BINTANGOR,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) HIN HUA",JENIS KEBANGSAAN (C),,SONG,Sarawak,1
+"SEKOLAH KEBANGSAAN ST LUKE NG BAOH",KEBANGSAAN,,DALAT,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) KWONG KOK",JENIS KEBANGSAAN (C),,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN NG MUJONG",KEBANGSAAN,,KAPIT,Sarawak,1
+"SEKOLAH KEBANGSAAN ULU RANAN",KEBANGSAAN,,KANOWIT,Sarawak,1
+"SEKOLAH KEBANGSAAN KPG SENARI",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN SG PAOH",KEBANGSAAN,,SARIKEI,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SG MOYAN",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN TANJUNG ASSAM",KEBANGSAAN,,SPAOH,Sarawak,1
+"SEKOLAH KEBANGSAAN PINANG",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) KAI SING",JENIS KEBANGSAAN (C),,BINTANGOR,Sarawak,1
+"SEKOLAH KEBANGSAAN SG. SENGIAN LABANG",KEBANGSAAN,,SEBAUH,Sarawak,1
+"SEKOLAH KEBANGSAAN KG TEBAANG",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA MERIT",KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH KEBANGSAAN MERBAU SERIAN",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA KARA",KEBANGSAAN,,PAKAN,Sarawak,1
+"SEKOLAH KEBANGSAAN ST ANTHONY KAWAN",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BUSO",JENIS KEBANGSAAN (C),,BAU,Sarawak,1
+"SEKOLAH KEBANGSAAN GAWANG EMPILI",KEBANGSAAN,,SIMUNJAN,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) BERATOK",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN SG SEBINTEK",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN KUALA BALINGIAN",KEBANGSAAN,,BALINGIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN ST JOHN TAEE",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA PAKAN",KEBANGSAAN,,PAKAN,Sarawak,1
+"SEKOLAH KEBANGSAAN ULU KAKUS",KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH KEBANGSAAN PEDAUN BAWAH",KEBANGSAAN,,BAU,Sarawak,1
+"SEKOLAH KEBANGSAAN HJ JUNID",KEBANGSAAN,,KABONG,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA STAMPIN",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN SERAYAN/KERANJI",KEBANGSAAN,,LUNDU,Sarawak,1
+"SEKOLAH KEBANGSAAN BEDUP",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) UK DAIK",JENIS KEBANGSAAN (C),,SIBU,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHAO SU",JENIS KEBANGSAAN (C),,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN SEMADA",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA NIROK NGEMAH",KEBANGSAAN,,KANOWIT,Sarawak,1
+"SEKOLAH KEBANGSAAN SG. MAONG HILIR KUCHING",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN TANJUNG PENASU",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN KUALA SIGU",KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA KABONG",JENIS KEBANGSAAN (C),,KABONG,Sarawak,1
+"SEKOLAH KEBANGSAAN KELAPA SAWIT NO. 2",KEBANGSAAN,,BEKENU,Sarawak,1
+"SEKOLAH KEBANGSAAN ST JUDE BUNAN",KEBANGSAAN,,TEBAKANG,Sarawak,1
+"SEKOLAH KEBANGSAAN SLDB LADANG 3",KEBANGSAAN,,MUKAH,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) YONG KWONG",JENIS KEBANGSAAN (C),,BINTANGOR,Sarawak,1
+"SEKOLAH KEBANGSAAN SG SAMERAN",KEBANGSAAN,,TEBEDU,Sarawak,1
+"SEKOLAH KEBANGSAAN SG BAYAN",KEBANGSAAN,,MUKAH,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA NGUNGUN",KEBANGSAAN,,KANOWIT,Sarawak,1
+"SEKOLAH KEBANGSAAN KAMPUNG NYALAU",KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGAR",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH KEBANGSAAN SANTUBONG",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN ST KEVIN SG KUT",KEBANGSAAN,,DALAT,Sarawak,1
+"SEKOLAH KEBANGSAAN ST LAWRENCE",KEBANGSAAN,,SRI AMAN,Sarawak,1
+"SEKOLAH KEBANGSAAN PUNAN BA",KEBANGSAAN,,BELAGA,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) NENG SHING",JENIS KEBANGSAAN (C),,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN SG. LAONG",KEBANGSAAN,,MIRI,Sarawak,1
+"SEKOLAH KEBANGSAAN SELANGAN",KEBANGSAAN,,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN AIRPORT",KEBANGSAAN,,BELAGA,Sarawak,1
+"SEKOLAH KEBANGSAAN ST PETER",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG ATIP",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN APING",KEBANGSAAN,,SRI AMAN,Sarawak,1
+"SEKOLAH KEBANGSAAN LEBAI MENTALI",KEBANGSAAN,,LUNDU,Sarawak,1
+"SEKOLAH KEBANGSAAN NG PENYARAI",KEBANGSAAN,,TATAU,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA TONDONG",JENIS KEBANGSAAN (C),,BAU,Sarawak,1
+"SEKOLAH KEBANGSAAN BAWANG ASSAN",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN NG ATOI",KEBANGSAAN,,SARATOK,Sarawak,1
+"SEKOLAH KEBANGSAAN LOBANG BATU",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN SG AUP",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN ST JOHN BETONG",KEBANGSAAN,,BETONG,Sarawak,1
+"SEKOLAH KEBANGSAAN SG. LAMAUS",KEBANGSAAN,,BATU NIAH,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) HUA NAM SARIKEI",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SPAOH",JENIS KEBANGSAAN (C),,SPAOH,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA KEDUP",KEBANGSAAN,,JULAU,Sarawak,1
+"SEKOLAH KEBANGSAAN RIIH DASO",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN APAR",KEBANGSAAN,,BAU,Sarawak,1
+"SEKOLAH KEBANGSAAN PAON/TEMAGA",KEBANGSAAN,,LUNDU,Sarawak,1
+"SEKOLAH MENENGAH WONG NAI SIONG",PRIVATE SCHOOL,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN UBONG IMANG",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN ST JAMES RAYANG",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN NIUP",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG BUSANG",KEBANGSAAN,,BELAGA,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG PANAI",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN SEBANDI",KEBANGSAAN,,LUNDU,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SAMBIR",JENIS KEBANGSAAN (C),,ASAJAYA,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BUNTAL",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) SUNG SANG",JENIS KEBANGSAAN (C),,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN ST JOHN KG MEDONG",KEBANGSAAN,,DALAT,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) KAI DEE",JENIS KEBANGSAAN (C),,SIBU,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG SAN",JENIS KEBANGSAAN (C),,SEBAUH,Sarawak,1
+"SEKOLAH KEBANGSAAN KG GUMPEY",KEBANGSAAN,,SIMUNJAN,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA PUSA",JENIS KEBANGSAAN (C),,PUSA,Sarawak,1
+"SEKOLAH KEBANGSAAN SIRA/KRIAN",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN KELURU TENGAH",KEBANGSAAN,,BEKENU,Sarawak,1
+"SEKOLAH KEBANGSAAN KUALA MUPUT",KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH KEBANGSAAN ULU MANDING",KEBANGSAAN,,PAKAN,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA PAK",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN ST AUGUSTINE KUCHING",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN UKONG",KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) EK HUA",JENIS KEBANGSAAN (C),,MUKAH,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA TADA",KEBANGSAAN,,KANOWIT,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA TEBAT",KEBANGSAAN,,ENGKILILI,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA DEBAK",JENIS KEBANGSAAN (C),,BETONG,Sarawak,1
+"SEKOLAH KEBANGSAAN SG. LIAM",KEBANGSAAN,,MIRI,Sarawak,1
+"SEKOLAH KEBANGSAAN KUALA ANNAU",KEBANGSAAN,,TATAU,Sarawak,1
+"SEKOLAH KEBANGSAAN ST PATRICK KUCHING",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN PURU SIA",KEBANGSAAN,,LAWAS,Sarawak,1
+"SEKOLAH KEBANGSAAN SG PASSAI",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BELIONG",JENIS KEBANGSAAN (C),,ASAJAYA,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BATU 11",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN TO' EMAN",KEBANGSAAN,,ROBAN,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG KEVOK",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN KG PANGTRAY",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH KEBANGSAAN RUMAH ESSAU",KEBANGSAAN,,BEKENU,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA TAMBIRAT",JENIS KEBANGSAAN (C),,ASAJAYA,Sarawak,1
+"SEKOLAH KEBANGSAAN ST AMBROSE PANCHOR",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA DAP",KEBANGSAAN,,KANOWIT,Sarawak,1
+"SEKOLAH KEBANGSAAN SEJIJAK",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN SUNGAI KAPIT",KEBANGSAAN,,KAPIT,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) TONG HUA",JENIS KEBANGSAAN (C),,BINTANGOR,Sarawak,1
+"SEKOLAH KEBANGSAAN TERASI",KEBANGSAAN,,ASAJAYA,Sarawak,1
+"SEKOLAH KEBANGSAAN NG IBUN",KEBANGSAAN,,KAPIT,Sarawak,1
+"SEKOLAH KEBANGSAAN ST ALBAN AMPUNGAN",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN PASIR TENGAH",KEBANGSAAN,,LUNDU,Sarawak,1
+"SEKOLAH KEBANGSAAN PUEH",KEBANGSAAN,,SEMATAN,Sarawak,1
+"SEKOLAH KEBANGSAAN SIAR CAMPURAN",KEBANGSAAN,,LUNDU,Sarawak,1`;
+
+let defaultTeacherCSV = `school_name,school_type,postcode,city,state_name,total_users
+"SEKOLAH MENENGAH KEBANGSAAN TEMENGGONG DATUK LAWAI JAU",SM KEBANGSAAN,,MARUDI,Sarawak,24
+"SEKOLAH MENENGAH KEBANGSAAN PUJUT",SM KEBANGSAAN,,MIRI,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN BINTULU",SM KEBANGSAAN,,BINTULU,Sarawak,5
+"SEKOLAH MENENGAH KEBANGSAAN DEMAK BARU",SM KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN MERBAU MIRI",SM KEBANGSAAN,,MIRI,Sarawak,4
+"SEKOLAH MENENGAH KEBANGSAAN KIDURONG",SM KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN LUTONG",SM KEBANGSAAN,,MIRI,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN DALAT",SM KEBANGSAAN,,DALAT,Sarawak,4
+"MRSM MUKAH",MAKTAB RENDAH SAINS MARA,,MUKAH,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN MUARA TUANG",SM KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN MARUDI",SM KEBANGSAAN,,BARAM,Sarawak,11
+"SEKOLAH MENENGAH KEBANGSAAN SIBURAN",SM KEBANGSAAN,,KUCHING,Sarawak,2
+"KOLEJ D PATINGGI ABANG HJ ABDILLAH",SM KEBANGSAAN,,KUCHING,Sarawak,4
+"SEKOLAH MENENGAH KEBANGSAAN KOTA SAMARAHAN",SM KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN LUNDU",SM KEBANGSAAN,,LUNDU,Sarawak,5
+"SEKOLAH MENENGAH KEBANGSAAN BANDAR BINTULU",SM KEBANGSAAN,,BINTULU,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN PENRISSEN",SM KEBANGSAAN,,KUCHING,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN SIBU JAYA",SM KEBANGSAAN,,SIBU,Sarawak,4
+"SEKOLAH MENENGAH KEBANGSAAN ASYAKIRIN",SM KEBANGSAAN,,BINTULU,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN PADUNGAN",SM KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN JALAN OYA",SM KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN BATU KAWA",SM KEBANGSAAN,,KUCHING,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN BATU LINTANG",SM KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN SEMERAH PADI",SM KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN WIRA PENRISSEN",SM KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN MUKAH",SM KEBANGSAAN,,MUKAH,Sarawak,2
+"KOLEJ TUN DATU TUANKU HAJI BUJANG",SM KEBANGSAAN,,MIRI,Sarawak,5
+"SEKOLAH MENENGAH KEBANGSAAN (BM) SARATOK",SM KEBANGSAAN,,SARATOK,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN SERIAN",SM KEBANGSAAN,,SERIAN,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN KAPIT",SM KEBANGSAAN,,KAPIT,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN SARIKEI BARU",SM KEBANGSAAN,,SARIKEI,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN SELIRIK",SM KEBANGSAAN,,KAPIT,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN ST TERESA",SM KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN BANDAR SAMARIANG",SM KEBANGSAAN,,KUCHING,Sarawak,4
+"SEKOLAH MENENGAH SAINS KUCHING UTARA",SM BERASRAMA PENUH,,KUCHING,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN THREE RIVERS",SM KEBANGSAAN,,MUKAH,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN KEMENA",SM KEBANGSAAN,,BINTULU,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN PAKU (S)",SM KEBANGSAAN,,BAU,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN CHUNG HUA MIRI",SM KEBANGSAAN,,MIRI,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN AGAMA TUN AHMAD ZAIDI",SM AGAMA,,KUCHING,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN BAKO (KUCHING)",SM KEBANGSAAN,,KUCHING,Sarawak,4
+"SEKOLAH MENENGAH KEBANGSAAN TUNKU ABDUL RAHMAN",SM KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN JALAN ARANG",SM KEBANGSAAN,,KUCHING,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN TINGGI KUCHING",SM KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN PETRA JAYA",SM KEBANGSAAN,,KUCHING,Sarawak,1
+"ST JOSEPH PRIVATE SCHOOL",PRIVATE SCHOOL,,KUCHING,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN KAPIT NO.2",SM KEBANGSAAN,,KAPIT,Sarawak,5
+"SEKOLAH MENENGAH KEBANGSAAN SRI MATANG",SM KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN MATANG HILIR",SM KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN DATO PERMAISURI",SM KEBANGSAAN,,MIRI,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN SRI AMAN",SM KEBANGSAAN,,SRI AMAN,Sarawak,4
+"SEKOLAH KEBANGSAAN MADRASAH DATUK HJ. ABDUL KADIR HASAN",KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN METHODIST",SM KEBANGSAAN,,SIBU,Sarawak,3
+"MRSM BETONG",MAKTAB RENDAH SAINS MARA,,BETONG,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN BUKIT ASSEK",SM KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN LIMBANG",SM KEBANGSAAN,,LIMBANG,Sarawak,8
+"MRSM KUCHING",MAKTAB RENDAH SAINS MARA,,KUCHING,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN BAU",SM KEBANGSAAN,,BAU,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN D P H ABDUL GAPOR",SM KEBANGSAAN,,KUCHING,Sarawak,9
+"SEKOLAH MENENGAH KEBANGSAAN KAMPUNG NANGKA",SM KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN SERI SETIA",SM KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN SUAI",SM KEBANGSAAN,,NIAH,Sarawak,1
+"SEKOLAH KEBANGSAAN ABANG HAJI MATAHIR",KEBANGSAAN,,SARIKEI,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN KAI CHUNG",SM KEBANGSAAN,,BINTANGOR,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN ST ANTHONY",SM KEBANGSAAN,,SARIKEI,Sarawak,2
+"SEKOLAH KEBANGSAAN AGAMA (MIS) MIRI",KEBANGSAAN,,MIRI,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN ROSLI DHOBY",SM KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN ASAJAYA",SM KEBANGSAAN,,ASAJAYA,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN SIMANGGANG",SM KEBANGSAAN,,SRI AMAN,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN KABONG",SM KEBANGSAAN,,KABONG,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN MATU",SM KEBANGSAAN,,MATU,Sarawak,2
+"SEKOLAH KEBANGSAAN ST EDMUND",KEBANGSAAN,,LIMBANG,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN TUN ABDUL RAZAK",SM KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN ST JOSEPH",SM KEBANGSAAN,,KUCHING,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN TOH PUAN DATUK PATINGGI HJH NORMAH",SM KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN ST MARY KUCHING",SM KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN AGAMA (M.I.S), BINTULU",KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN GEDONG",SM KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH MENENGAH SAINS KUCHING",SM BERASRAMA PENUH,,KUCHING,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN DATUK PATINGGI KEDIT",SM KEBANGSAAN,,BETONG,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN ST LUKE",SM KEBANGSAAN,,SRI AMAN,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN ST. JOSEPH, MIRI",SM KEBANGSAAN,,MIRI,Sarawak,1
+"SEKOLAH KEBANGSAAN (A) IBNU KHALDUN",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN SPAOH",SM KEBANGSAAN,,SPAOH,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN ASAJAYA NO.2",SM KEBANGSAAN,,ASAJAYA,Sarawak,4
+"SEKOLAH MENENGAH SAINS MIRI",SM BERASRAMA PENUH,,MIRI,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN ENGKILILI",SM KEBANGSAAN,,ENGKILILI,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN SUBIS",SM KEBANGSAAN,,BATU NIAH,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN PUSA",SM KEBANGSAAN,,PUSA,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN TARAT",SM KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN ST. COLUMBA",SM KEBANGSAAN,,MIRI,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN TEBAKANG",SM KEBANGSAAN,,SERIAN,Sarawak,5
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA 2",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN TEBEDU",SM KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN AGAMA (MIS) LAWAS",KEBANGSAAN,,LAWAS,Sarawak,2
+"SEKOLAH KEBANGSAAN JALAN BINTANG",KEBANGSAAN,,MIRI,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN BELAGA",SM KEBANGSAAN,,BELAGA,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN SARIBAS",SM KEBANGSAAN,,DEBAK,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN SACRED HEART",SM KEBANGSAAN,,SIBU,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN BELAWAI",SM KEBANGSAAN,,BELAWAI,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN ST. AUGUSTINE BETONG",SM KEBANGSAAN,,BETONG,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN ST. PATRICK MUKAH",SM KEBANGSAAN,,MUKAH,Sarawak,3
+"SEKOLAH KEBANGSAAN SEMERAH PADI",KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN SONG",SM KEBANGSAAN,,SONG,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN ST ELIZABETH",SM KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN AGAMA SHEIKH HJ OTHMAN ABD WAHAB",SMK AGAMA,,KUCHING,Sarawak,6
+"SEKOLAH MENENGAH KEBANGSAAN TUNG HUA",SM KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN BAKUN",SM KEBANGSAAN,,BELAGA,Sarawak,4
+"SEKOLAH MENENGAH KEBANGSAAN LUAR BANDAR MIRI",SM KEBANGSAAN,,MIRI,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN TELANG USAN",SM KEBANGSAAN,,BARAM,Sarawak,3
+"SMT SEJINGKAT",SM TEKNIK,,KUCHING,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN SUNGAI MERAH",SM KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN SERI PATIAMBUN LIMBANG",SM KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH MENENGAH LODGE",PRIVATE SCHOOL,,KUCHING,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN BANDAR SARIKEI",SM KEBANGSAAN,,SARIKEI,Sarawak,2
+"SEKOLAH KEBANGSAAN POYUT",KEBANGSAAN,,MARUDI,Sarawak,2
+"SEKOLAH KEBANGSAAN BELIPAT",KEBANGSAAN,,LAWAS,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN BANDAR SIBU",SM KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN JULAU",SM KEBANGSAAN,,JULAU,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN MELUGU",SM KEBANGSAAN,,SRI AMAN,Sarawak,1
+"Yayasan Sarawak International Secondary School",INTERNATIONAL SCHOOL,,KUCHING,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN SEMOP",SM KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH KEBANGSAAN ASYAKIRIN",KEBANGSAAN,,BINTULU,Sarawak,2
+"SEKOLAH KEBANGSAAN KITA",KEBANGSAAN,,NIAH,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN TRUSAN",SM KEBANGSAAN,,LAWAS,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN CHUNG HUA",SM KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN SIOL KANAN",KEBANGSAAN,,KUCHING,Sarawak,14
+"SEKOLAH MENENGAH KEBANGSAAN DURIN",SM KEBANGSAAN,,SIBU,Sarawak,3
+"SEKOLAH KEBANGSAAN ST MARY KUCHING",KEBANGSAAN,,KUCHING,Sarawak,3
+"SEKOLAH KEBANGSAAN KIDURONG",KEBANGSAAN,,BINTULU,Sarawak,2
+"SEKOLAH KEBANGSAAN SG PETAI",KEBANGSAAN,,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN AGAMA SIBU",KEBANGSAAN,,SIBU,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN SANTUBONG",SM KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN LONG LAMA",SM KEBANGSAAN,,LONG LAMA,Sarawak,4
+"SEKOLAH MENENGAH KEBANGSAAN DATUK HAJI ABDUL RAHMAN YAKUB",SM KEBANGSAAN,,KANOWIT,Sarawak,1
+"SEKOLAH KEBANGSAAN KAMPUNG JEPAK",KEBANGSAAN,,BINTULU,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN BANDAR BINTANGOR",SM KEBANGSAAN,,BINTANGOR,Sarawak,1
+"SEKOLAH KEBANGSAAN BANDAR SAMARIANG",KEBANGSAAN,,KUCHING,Sarawak,3
+"SEKOLAH KEBANGSAAN MIRI",KEBANGSAAN,,MIRI,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN BUKIT LIMA",SM KEBANGSAAN,,SIBU,Sarawak,10
+"SEKOLAH KEBANGSAAN TANJUNG BATU",KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN SG PAOH",SM KEBANGSAAN,,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN SENADIN",KEBANGSAAN,,MIRI,Sarawak,1
+"SEKOLAH KEBANGSAAN SENTOSA SIBU",KEBANGSAAN,,SIBU,Sarawak,3
+"SEKOLAH KEBANGSAAN DATO SHARIF HAMID",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN TINGGI SARIKEI",SM KEBANGSAAN,,SARIKEI,Sarawak,4
+"SEKOLAH KEBANGSAAN BULAN JERAGAM",KEBANGSAAN,,SEBUYAU,Sarawak,5
+"SEKOLAH MENENGAH KEBANGSAAN PAKAN",SM KEBANGSAAN,,PAKAN,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN LUAR BANDAR NO 1",SM KEBANGSAAN,,SIBU,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN TINJAR",SM KEBANGSAAN,,BARAM,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN PADAWAN",SM KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN SOUTH",KEBANGSAAN,,MIRI,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN MEDAMIT",SM KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN BAKONG",SM KEBANGSAAN,,MIRI,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN AGAMA IGAN",SMK AGAMA,,MUKAH,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA PUJUT",JENIS KEBANGSAAN (C),,MIRI,Sarawak,2
+"SEKOLAH KEBANGSAAN KRUSEN",KEBANGSAAN,,SERIAN,Sarawak,3
+"SEKOLAH KEBANGSAAN TAN SRI DATUK HAJI MOHAMED",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN TABUAN JAYA",SM KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN ANCHI",KEBANGSAAN,,MIRI,Sarawak,3
+"SEKOLAH MENENGAH KEBANGSAAN ST THOMAS",SM KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN ST TERESA KUCHING",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN SONG 2",SM KEBANGSAAN,,SONG,Sarawak,1
+"SEKOLAH KEBANGSAAN ULU SG MERAH",KEBANGSAAN,,SIBU,Sarawak,3
+"SEKOLAH KEBANGSAAN MAPU",KEBANGSAAN,,SERIAN,Sarawak,2
+"SEKOLAH KEBANGSAAN LONG TENGOA",KEBANGSAAN,,LAWAS,Sarawak,1
+"SEKOLAH KEBANGSAAN TUDAN",KEBANGSAAN,,MIRI,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) KENG NANG",JENIS KEBANGSAAN (C),,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN JALAN DESHON",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN ST ANNE",KEBANGSAAN,,SARIKEI,Sarawak,1
+"KOLEJ VOKASIONAL BINTULU",KOLEJ VOKASIONAL,,BINTULU,Sarawak,1
+"SEKOLAH KEBANGSAAN ST. ANTHONY, BINTULU",KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH KEBANGSAAN GITA",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN SUBA BUAN",KEBANGSAAN,,BAU,Sarawak,2
+"SEKOLAH KEBANGSAAN SAINT JOSEPH",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH RENDAH SUNNY HILL",PRIVATE SCHOOL,,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN (AGAMA) MAJLIS ISLAM SARAWAK MUKAH",KEBANGSAAN,,MUKAH,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN JULAU NO.2",SM KEBANGSAAN,,JULAU,Sarawak,3
+"SEKOLAH KEBANGSAAN SEMENGGOK",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA 1",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN ABANG ABDUL RAHMAN",KEBANGSAAN,,SARATOK,Sarawak,3
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA ENGKILILI",JENIS KEBANGSAAN (C),,ENGKILILI,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN DESHON",SM KEBANGSAAN,,SIBU,Sarawak,2
+"SEKOLAH MENENGAH KEBANGSAAN AGAMA SARATOK",SMK AGAMA,,SARATOK,Sarawak,19
+"SEKOLAH KEBANGSAAN AGAMA SRI AMAN",KEBANGSAAN,,SRI AMAN,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA NO.6",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN ASTANA",KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN LUSONG LAKU",KEBANGSAAN,,BELAGA,Sarawak,1
+"SEKOLAH KEBANGSAAN ABANG ALI",KEBANGSAAN,,SIBU,Sarawak,1
+"KOLEJ VOKASIONAL MIRI",KOLEJ VOKASIONAL,,MIRI,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN AGAMA",SMK AGAMA,,MIRI,Sarawak,1
+"SEKOLAH KEBANGSAAN SG NAMAN",KEBANGSAAN,,SIBU,Sarawak,3
+"SEKOLAH KEBANGSAAN SENIBONG",KEBANGSAAN,,BAU,Sarawak,1
+"SEKOLAH KEBANGSAAN BATU LINTANG",KEBANGSAAN,,SRI AMAN,Sarawak,3
+"SEKOLAH KEBANGSAAN ST COLUMBA",KEBANGSAAN,,MIRI,Sarawak,3
+"SEKOLAH JENIS KEBANGSAAN (CINA) STAMPIN",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,6
+"SEKOLAH KEBANGSAAN NANGA AUP",KEBANGSAAN,,ENGKILILI,Sarawak,1
+"SEKOLAH KEBANGSAAN REBAK",KEBANGSAAN,,ASAJAYA,Sarawak,1
+"SEKOLAH KEBANGSAAN LEPONG BALLEH",KEBANGSAAN,,KAPIT,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHONG BOON",JENIS KEBANGSAAN (C),,MUKAH,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) SU TAK",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA KROKOP",JENIS KEBANGSAAN (C),,MIRI,Sarawak,2
+"SEKOLAH KEBANGSAAN TABUAN HILIR",KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN PUJUT CORNER",KEBANGSAAN,,MIRI,Sarawak,1
+"SEKOLAH KEBANGSAAN BANDAR LIMBANG",KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH KEBANGSAAN DATO TRAOH MUARA TUANG",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) HOCK LAM",JENIS KEBANGSAAN (C),,KAPIT,Sarawak,2
+"SEKOLAH KEBANGSAAN MUKAH",KEBANGSAAN,,MUKAH,Sarawak,3
+"SEKOLAH KEBANGSAAN BUNTAL",KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA MIRI",JENIS KEBANGSAAN (C),,MIRI,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN KATIBAS",SM KEBANGSAAN,,SONG,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG KESSEH",KEBANGSAAN,,MARUDI,Sarawak,2
+"SEKOLAH KEBANGSAAN SERIAN",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN KWONG HUA MIDDLE",SM KEBANGSAAN,,SIBU,Sarawak,4
+"SEKOLAH KEBANGSAAN CATHOLIC ENGLISH",KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN LIMBANG",KEBANGSAAN,,LIMBANG,Sarawak,2
+"SEKOLAH KEBANGSAAN METHODIST ANGLO-CHINESE",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN ORANG KAYA MOHAMMAD",KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG SEPILING",KEBANGSAAN,,MARUDI,Sarawak,2
+"SEKOLAH KEBANGSAAN ST AUGUSTINE BETONG",KEBANGSAAN,,BETONG,Sarawak,4
+"SEKOLAH KEBANGSAAN METHODIST",KEBANGSAAN,,KAPIT,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) SIONG BOON",JENIS KEBANGSAAN (C),,BINTULU,Sarawak,1
+"SEKOLAH KEBANGSAAN BATU KELING",KEBANGSAAN,,BELAGA,Sarawak,1
+"SEKOLAH KEBANGSAAN MERPATI JEPANG",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA, BINTULU",JENIS KEBANGSAAN (C),,BINTULU,Sarawak,1
+"SEKOLAH KEBANGSAAN MATU BARU",KEBANGSAAN,,KUCHING,Sarawak,3
+"SEKOLAH KEBANGSAAN HAJI KELALI SEMERA",KEBANGSAAN,,ASAJAYA,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) SU MING",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN ABANG AING",KEBANGSAAN,,SRI AMAN,Sarawak,3
+"SEKOLAH KEBANGSAAN SARIKEI",KEBANGSAAN,,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN BELADIN",KEBANGSAAN,,PUSA,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) KAI MING",JENIS KEBANGSAAN (C),,BINTULU,Sarawak,2
+"SEKOLAH KEBANGSAAN ULU SEGAN",KEBANGSAAN,,BINTULU,Sarawak,2
+"SEKOLAH KEBANGSAAN ST PATRICK MUKAH",KEBANGSAAN,,MUKAH,Sarawak,1
+"SEKOLAH KEBANGSAAN ABANG KADIR GEDONG",KEBANGSAAN,,SIMUNJAN,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) SOON HWA SUNDAR",JENIS KEBANGSAAN (C),,LAWAS,Sarawak,1
+"SEKOLAH KEBANGSAAN SUNGAI SEBATU",KEBANGSAAN,,MARUDI,Sarawak,2
+"SEKOLAH KEBANGSAAN LUBOK ANTU",KEBANGSAAN,,LUBOK ANTU,Sarawak,1
+"SEKOLAH KEBANGSAAN ULU DARO",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH KEBANGSAAN DATU PENGIRAN MOHAMAD",KEBANGSAAN,,OYA,Sarawak,1
+"SEKOLAH KEBANGSAAN ST. CHRISTOPHER DEBAK",KEBANGSAAN,,DEBAK,Sarawak,2
+"SEKOLAH KEBANGSAAN TAMBIRAT",KEBANGSAAN,,ASAJAYA,Sarawak,1
+"SEKOLAH KEBANGSAAN TEBELU",KEBANGSAAN,,SEBUYAU,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN BATANG IGAN",SM KEBANGSAAN,,MUKAH,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) SACRED HEART CHINESE",JENIS KEBANGSAAN (C),,SIBU,Sarawak,2
+"SEKOLAH KEBANGSAAN PASIR PANDAK",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHIN NAM",JENIS KEBANGSAAN (C),,NIAH,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN NANGA DAP",SM KEBANGSAAN,,KANOWIT,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA KESIT",KEBANGSAAN,,LUBOK ANTU,Sarawak,1
+"SEKOLAH KEBANGSAAN MELAYU PUSAT",KEBANGSAAN,,LIMBANG,Sarawak,2
+"SEKOLAH KEBANGSAAN PARISH",KEBANGSAAN,,MUKAH,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA MARUDI",JENIS KEBANGSAAN (C),,MARUDI,Sarawak,2
+"SEKOLAH KEBANGSAAN GITA 2",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN PARUN SUAN",KEBANGSAAN,,SERIAN,Sarawak,2
+"SEKOLAH KEBANGSAAN MELUGU",KEBANGSAAN,,SRI AMAN,Sarawak,1
+"SEKOLAH KEBANGSAAN ST PIUS LONG SAN",KEBANGSAAN,,MARUDI,Sarawak,2
+"SEKOLAH KEBANGSAAN LONG MOH",KEBANGSAAN,,MARUDI,Sarawak,2
+"SEKOLAH KEBANGSAAN ST LUKE",KEBANGSAAN,,SRI AMAN,Sarawak,1
+"Sekolah Rendah Kebangsaan Bagian",KEBANGSAAN,,TATAU,Sarawak,3
+"SEKOLAH KEBANGSAAN SEBAKO DARO",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH KEBANGSAAN BAWANG TIAN",KEBANGSAAN,,MATU,Sarawak,1
+"SEKOLAH KEBANGSAAN KENYALANG",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) YEE TING",JENIS KEBANGSAAN (C),,KANOWIT,Sarawak,1
+"SEKOLAH KEBANGSAAN PENGHULU BAYA MALLANG",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN KAMPUNG PAHLAWAN",KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH KEBANGSAAN JLN.ONG TIANG SWEE",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG JEGAN",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG GANG",KEBANGSAAN,,BELAGA,Sarawak,1
+"SEKOLAH KEBANGSAAN KAMPUNG IGAN",KEBANGSAAN,,MUKAH,Sarawak,2
+"SEKOLAH KEBANGSAAN TATAU",KEBANGSAAN,,TATAU,Sarawak,3
+"SEKOLAH KEBANGSAAN LANDEH",KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN ST JOHN BAU",KEBANGSAAN,,BAU,Sarawak,2
+"SEKOLAH KEBANGSAAN JALAN ARANG",KEBANGSAAN,,KUCHING,Sarawak,3
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BETONG",JENIS KEBANGSAAN (C),,BETONG,Sarawak,2
+"SEKOLAH KEBANGSAAN ST DAVID",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN ST JAMES QUOP",KEBANGSAAN,,KUCHING,Sarawak,7
+"SEKOLAH KEBANGSAAN SONG KHENG HAI",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,3
+"SEKOLAH KEBANGSAAN BUMIPUTERA",KEBANGSAAN,,LUNDU,Sarawak,1
+"SEKOLAH KEBANGSAAN KUALA TATAU",KEBANGSAAN,,TATAU,Sarawak,4
+"SEKOLAH KEBANGSAAN ABANG BUYUK",KEBANGSAAN,,BELAWAI,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BATU 10",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,3
+"SEKOLAH JENIS KEBANGSAAN (CINA) ST PAUL",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN NG MALONG",KEBANGSAAN,,SARATOK,Sarawak,1
+"SEKOLAH KEBANGSAAN ABANG MAN",KEBANGSAAN,,SIMUNJAN,Sarawak,1
+"SEKOLAH KEBANGSAAN SIBU BANDARAN NO 3",KEBANGSAAN,,SIBU,Sarawak,3
+"SEKOLAH KEBANGSAAN BATANG AI",KEBANGSAAN,,LUBOK ANTU,Sarawak,1
+"SEKOLAH KEBANGSAAN PENOM",KEBANGSAAN,,SPAOH,Sarawak,1
+"SEKOLAH KEBANGSAAN ST RITA",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN BALAI RINGIN",KEBANGSAAN,,SERIAN,Sarawak,2
+"SEKOLAH KEBANGSAAN SOK",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH KEBANGSAAN SG KEM BATU 18",KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH KEBANGSAAN PUSA",KEBANGSAAN,,BETONG,Sarawak,1
+"SEKOLAH KEBANGSAAN MERANEK",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,2
+"SEKOLAH KEBANGSAAN NANGA NYIMOH",KEBANGSAAN,,SONG,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SIBU",JENIS KEBANGSAAN (C),,SIBU,Sarawak,2
+"SEKOLAH KEBANGSAAN KUALA NYALAU",KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH KEBANGSAAN SG. BAKAS MIRI",KEBANGSAAN,,MIRI,Sarawak,2
+"SEKOLAH KEBANGSAAN SG BUKIT BALAI",KEBANGSAAN,,SEBAUH,Sarawak,3
+"SEKOLAH KEBANGSAAN RANTAU DILANG",KEBANGSAAN,,KANOWIT,Sarawak,2
+"SEKOLAH KEBANGSAAN TAMBAK",KEBANGSAAN,,PUSA,Sarawak,1
+"SEKOLAH KEBANGSAAN RENTAP",KEBANGSAAN,,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN SIANG-SIANG",KEBANGSAAN,,LAWAS,Sarawak,1
+"SEKOLAH KEBANGSAAN SUNGAI TUAH",KEBANGSAAN,,KANOWIT,Sarawak,2
+"SEKOLAH KEBANGSAAN KG BARU BINTULU",KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH KEBANGSAAN PODAM",KEBANGSAAN,,BAU,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA MATU",JENIS KEBANGSAAN (C),,MATU,Sarawak,5
+"SEKOLAH KEBANGSAAN HUA HIN ENGLISH",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) BULAT",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN BALLEH",SM KEBANGSAAN,,KAPIT,Sarawak,1
+"SEKOLAH KEBANGSAAN SUNDAR",KEBANGSAAN,,LAWAS,Sarawak,1
+"SEKOLAH KEBANGSAAN ST ANDREW KUCHING",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN SERUMBU",KEBANGSAAN,,BAU,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA STRAS",KEBANGSAAN,,BINTANGOR,Sarawak,1
+"SEKOLAH KEBANGSAAN KG TANJUNG TUANG",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA SEMAH",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH MENENGAH KEBANGSAAN BARIO",SM KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN SERASOT",KEBANGSAAN,,BAU,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN SUNGAI JAONG MARUDI",JENIS KEBANGSAAN (C),,MARUDI,Sarawak,2
+"SEKOLAH KEBANGSAAN SEMOP",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH KEBANGSAAN MEDANG",KEBANGSAAN,,PUSA,Sarawak,1
+"SEKOLAH KEBANGSAAN RUMAH RANGGONG",KEBANGSAAN,,NIAH,Sarawak,2
+"SEKOLAH KEBANGSAAN DESA LAVANG",KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH KEBANGSAAN SELEPONG",KEBANGSAAN,,SRI AMAN,Sarawak,2
+"SEKOLAH KEBANGSAAN ORANG KAYA TEMENGGONG TANDUK",KEBANGSAAN,,SARATOK,Sarawak,2
+"SEKOLAH KEBANGSAAN BUKIT BATU",KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH KEBANGSAAN TIGA KAMPUNG",KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH KEBANGSAAN MOYAN LAUT",KEBANGSAAN,,ASAJAYA,Sarawak,2
+"SEKOLAH KEBANGSAAN UMA BAWANG",KEBANGSAAN,,LONG LAMA,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SYN-SAN-TU",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN ST ALBAN",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN PENGHULU ANDIN",KEBANGSAAN,,SARIKEI,Sarawak,2
+"SEKOLAH KEBANGSAAN BABANG",KEBANGSAAN,,SARATOK,Sarawak,1
+"SEKOLAH KEBANGSAAN PUNANG",KEBANGSAAN,,LAWAS,Sarawak,1
+"SEKOLAH KEBANGSAAN SG RASAU",KEBANGSAAN,,DALAT,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SIBUTI",JENIS KEBANGSAAN (C),,BEKENU,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BALINGIAN",JENIS KEBANGSAAN (C),,BALINGIAN,Sarawak,2
+"SEKOLAH KEBANGSAAN NANGA TUTUS",KEBANGSAAN,,SIBU,Sarawak,2
+"SEKOLAH KEBANGSAAN PATUNG",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) SG APONG",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) POI YUK",JENIS KEBANGSAAN (C),,DALAT,Sarawak,2
+"SEKOLAH KEBANGSAAN BEKENU",KEBANGSAAN,,BEKENU,Sarawak,1
+"SEKOLAH KEBANGSAAN BIAWAK",KEBANGSAAN,,LUNDU,Sarawak,1
+"SEKOLAH KEBANGSAAN PENGARAH ENTERI",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG TUKON",KEBANGSAAN,,LAWAS,Sarawak,2
+"SEKOLAH KEBANGSAAN LELA PAHLAWAN",KEBANGSAAN,,LINGGA,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA DAYU",KEBANGSAAN,,JULAU,Sarawak,1
+"SEKOLAH KEBANGSAAN KERANGAN",KEBANGSAAN,,LAWAS,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG LAMEI",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN SUNGAI KUT TENGAH DALAT",KEBANGSAAN,,DALAT,Sarawak,2
+"SEKOLAH KEBANGSAAN PENDAM",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,2
+"SEKOLAH KEBANGSAAN LONG LUPING",KEBANGSAAN,,LAWAS,Sarawak,2
+"SEKOLAH KEBANGSAAN ST FRANCIS XAVIER, KANOWIT",KEBANGSAAN,,KANOWIT,Sarawak,1
+"SEKOLAH KEBANGSAAN BATU WONG",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN ULU LUBAI",KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH KEBANGSAAN TUI",KEBANGSAAN,,PUSA,Sarawak,1
+"SEKOLAH KEBANGSAAN GEMANG",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN BATU 15",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG SEGAHAM",KEBANGSAAN,,BELAGA,Sarawak,1
+"SEKOLAH KEBANGSAAN KG. BERAYA",KEBANGSAAN,,MIRI,Sarawak,1
+"SEKOLAH KEBANGSAAN SERABANG",KEBANGSAAN,,PUSA,Sarawak,1
+"SEKOLAH KEBANGSAAN MUHIBBAH",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN BAKONG",KEBANGSAAN,,SRI AMAN,Sarawak,1
+"SEKOLAH KEBANGSAAN NG SEGENOK",KEBANGSAAN,,KAPIT,Sarawak,1
+"SEKOLAH KEBANGSAAN ST BERNARD DALAT",KEBANGSAAN,,DALAT,Sarawak,3
+"SEKOLAH KEBANGSAAN TANJONG",KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH KEBANGSAAN RANTAU KEMIDING",KEBANGSAAN,,KANOWIT,Sarawak,1
+"SEKOLAH KEBANGSAAN RANTAU PANJANG SIBU",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN OYAN TENGAH",KEBANGSAAN,,KAPIT,Sarawak,2
+"SEKOLAH KEBANGSAAN KELAWIT",KEBANGSAAN,,TATAU,Sarawak,1
+"SEKOLAH KEBANGSAAN BAU",KEBANGSAAN,,BAU,Sarawak,1
+"SEKOLAH KEBANGSAAN SPAOH",KEBANGSAAN,,BETONG,Sarawak,1
+"SEKOLAH KEBANGSAAN PENGHULU IMBAN",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN KG. BAKAM",KEBANGSAAN,,MIRI,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG SEBANGAN",KEBANGSAAN,,LAWAS,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA TATAU",JENIS KEBANGSAAN (C),,TATAU,Sarawak,6
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BATU 32",JENIS KEBANGSAAN (C),,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA POI",KEBANGSAAN,,KANOWIT,Sarawak,3
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA LUNDU",JENIS KEBANGSAAN (C),,LUNDU,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA UNDOP",JENIS KEBANGSAAN (C),,SRI AMAN,Sarawak,1
+"SEKOLAH KEBANGSAAN HIJRAH BADONG",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH KEBANGSAAN JAWA",KEBANGSAAN,,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN KG JEBUNGAN",KEBANGSAAN,,MUKAH,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA MERURUN",KEBANGSAAN,,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN LEPONG AJAI",KEBANGSAAN,,MIRI,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG URUN",KEBANGSAAN,,BELAGA,Sarawak,1
+"SEKOLAH KEBANGSAAN PAKU CENTRAL",KEBANGSAAN,,SPAOH,Sarawak,1
+"SEKOLAH KEBANGSAAN ASSUN",KEBANGSAAN,,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN BAOH ULU",KEBANGSAAN,,DALAT,Sarawak,1
+"SEKOLAH KEBANGSAAN ST MARK SIBU",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN BUKIT KINYAU",KEBANGSAAN,,SARIKEI,Sarawak,2
+"SEKOLAH KEBANGSAAN SAGENG",KEBANGSAAN,,SIMUNJAN,Sarawak,1
+"SEKOLAH KEBANGSAAN PERPAT",KEBANGSAAN,,KABONG,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG ANAP",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) ING GUONG",JENIS KEBANGSAAN (C),,SIBU,Sarawak,2
+"SEKOLAH KEBANGSAAN SG MADOR",KEBANGSAAN,,BINTANGOR,Sarawak,1
+"SEKOLAH KEBANGSAAN KG SENAU",KEBANGSAAN,,OYA,Sarawak,2
+"SEKOLAH KEBANGSAAN TUNGKAH DAYAK",KEBANGSAAN,,SIMUNJAN,Sarawak,1
+"SEKOLAH KEBANGSAAN SG ANAK",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN ST PAUL ROBAN",KEBANGSAAN,,ROBAN,Sarawak,1
+"SEKOLAH KEBANGSAAN KEM SKRANG",KEBANGSAAN,,LUBOK ANTU,Sarawak,2
+"SEKOLAH KEBANGSAAN MERITAM",KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH KEBANGSAAN SEBEMBAN",KEBANGSAAN,,SPAOH,Sarawak,1
+"SEKOLAH KEBANGSAAN ST BARNABAS BARU",KEBANGSAAN,,SERIAN,Sarawak,2
+"SEKOLAH KEBANGSAAN GEORGE",KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN TELOK GELAM",KEBANGSAAN,,DARO,Sarawak,2
+"SEKOLAH KEBANGSAAN TULAI",KEBANGSAAN,,BINTANGOR,Sarawak,1
+"SEKOLAH KEBANGSAAN ST LUKE NG BAOH",KEBANGSAAN,,DALAT,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SG MOYAN",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN TANJUNG ASSAM",KEBANGSAAN,,SPAOH,Sarawak,1
+"SEKOLAH KEBANGSAAN KG TEBAANG",KEBANGSAAN,,DARO,Sarawak,3
+"SEKOLAH KEBANGSAAN NANGA MERIT",KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH KEBANGSAAN MERBAU SERIAN",KEBANGSAAN,,SERIAN,Sarawak,2
+"SEKOLAH KEBANGSAAN NANGA KARA",KEBANGSAAN,,PAKAN,Sarawak,1
+"SEKOLAH KEBANGSAAN ST ANTHONY KAWAN",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN SG SEBINTEK",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN ULU KAKUS",KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH KEBANGSAAN SERAYAN/KERANJI",KEBANGSAAN,,LUNDU,Sarawak,1
+"SEKOLAH KEBANGSAAN SG. MAONG HILIR KUCHING",KEBANGSAAN,,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN KUALA SIGU",KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA KABONG",JENIS KEBANGSAAN (C),,KABONG,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA NGUNGUN",KEBANGSAAN,,KANOWIT,Sarawak,2
+"SEKOLAH KEBANGSAAN ST KEVIN SG KUT",KEBANGSAAN,,DALAT,Sarawak,3
+"SEKOLAH KEBANGSAAN AIRPORT",KEBANGSAAN,,BELAGA,Sarawak,8
+"SEKOLAH KEBANGSAAN LONG ATIP",KEBANGSAAN,,MARUDI,Sarawak,2
+"SEKOLAH KEBANGSAAN LEBAI MENTALI",KEBANGSAAN,,LUNDU,Sarawak,1
+"SEKOLAH KEBANGSAAN NG PENYARAI",KEBANGSAAN,,TATAU,Sarawak,1
+"SEKOLAH KEBANGSAAN LOBANG BATU",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN RIIH DASO",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG BUSANG",KEBANGSAAN,,BELAGA,Sarawak,1
+"SEKOLAH KEBANGSAAN SEBANDI",KEBANGSAAN,,LUNDU,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG SAN",JENIS KEBANGSAAN (C),,SEBAUH,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) EK HUA",JENIS KEBANGSAAN (C),,MUKAH,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA TEBAT",KEBANGSAAN,,ENGKILILI,Sarawak,1
+"SEKOLAH KEBANGSAAN SG. LIAM",KEBANGSAAN,,MIRI,Sarawak,1
+"SEKOLAH KEBANGSAAN KUALA ANNAU",KEBANGSAAN,,TATAU,Sarawak,2
+"SEKOLAH KEBANGSAAN PURU SIA",KEBANGSAAN,,LAWAS,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BATU 11",JENIS KEBANGSAAN (C),,KUCHING,Sarawak,2
+"SEKOLAH KEBANGSAAN LONG KEVOK",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN KG PANGTRAY",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH KEBANGSAAN SEJIJAK",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN SUNGAI KAPIT",KEBANGSAAN,,KAPIT,Sarawak,4
+"SEKOLAH KEBANGSAAN NG METAH",KEBANGSAAN,,KAPIT,Sarawak,7
+"SEKOLAH JENIS KEBANGSAAN (CINA) TIONG HO",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,5
+"SEKOLAH KEBANGSAAN KG KLID/PLAJAU",KEBANGSAAN,,DALAT,Sarawak,4
+"SEKOLAH KEBANGSAAN NANGA MAONG",KEBANGSAAN,,JULAU,Sarawak,3
+"SEKOLAH KEBANGSAAN KUALA KEBULU",KEBANGSAAN,,BINTULU,Sarawak,3
+"SEKOLAH KEBANGSAAN RUMAH KESENG",KEBANGSAAN,,BINTULU,Sarawak,3
+"SEKOLAH KEBANGSAAN NG TEMALAT",KEBANGSAAN,,SONG,Sarawak,3
+"SEKOLAH KEBANGSAAN SBANGKI",KEBANGSAAN,,LUBOK ANTU,Sarawak,2
+"SEKOLAH KEBANGSAAN ULU PELAGUS",KEBANGSAAN,,KAPIT,Sarawak,2
+"SEKOLAH KEBANGSAAN TAMBAY",KEBANGSAAN,,KOTA SAMARAHAN,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) SU LOK",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) MING TAK",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,2
+"SEKOLAH KEBANGSAAN TANJUNG BUNDUNG",KEBANGSAAN,,BINTANGOR,Sarawak,2
+"SEKOLAH KEBANGSAAN BATU BUNGAN",KEBANGSAAN,,MARUDI,Sarawak,2
+"SEKOLAH KEBANGSAAN SG SENTEBU",KEBANGSAAN,,SARIKEI,Sarawak,2
+"SEKOLAH KEBANGSAAN KERANGGAS",KEBANGSAAN,,SRI AMAN,Sarawak,2
+"SEKOLAH KEBANGSAAN SG SELIDAP",KEBANGSAAN,,BINTANGOR,Sarawak,2
+"SEKOLAH KEBANGSAAN TEMONG",KEBANGSAAN,,TEBEDU,Sarawak,2
+"SEKOLAH KEBANGSAAN RUMAH BARAT",KEBANGSAAN,,BEKENU,Sarawak,2
+"SEKOLAH KEBANGSAAN WONG BESI",KEBANGSAAN,,SARATOK,Sarawak,2
+"SEKOLAH KEBANGSAAN SAMPUN TEBUN",KEBANGSAAN,,ASAJAYA,Sarawak,2
+"SEKOLAH KEBANGSAAN ULU LEMANAK",KEBANGSAAN,,LUBOK ANTU,Sarawak,2
+"SEKOLAH KEBANGSAAN PENDIDIKAN KHAS (CACAT PENDENGARAN)",KEBANGSAAN,,SIBU,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SEBUKU",JENIS KEBANGSAAN (C),,BAU,Sarawak,2
+"SEKOLAH KEBANGSAAN SINGAT",KEBANGSAAN,,SIBU,Sarawak,2
+"SEKOLAH JENIS KEBANGSAAN (CINA) SHING HUA",JENIS KEBANGSAAN (C),,KANOWIT,Sarawak,2
+"SEKOLAH KEBANGSAAN MUPONG ULIN",KEBANGSAAN,,BINTANGOR,Sarawak,2
+"SEKOLAH KEBANGSAAN NANGA TIBU",KEBANGSAAN,,LUBOK ANTU,Sarawak,2
+"SEKOLAH KEBANGSAAN RANTAU PANJAI",KEBANGSAAN,,KAPIT,Sarawak,2
+"SEKOLAH KEBANGSAAN HAJI BOLLAH",KEBANGSAAN,,SARATOK,Sarawak,2
+"SEKOLAH KEBANGSAAN ULU SUNGAI SIONG",KEBANGSAAN,,SIBU,Sarawak,2
+"SEKOLAH KEBANGSAAN BOKAH",KEBANGSAAN,,LUNDU,Sarawak,2
+"SEKOLAH KEBANGSAAN NG DALAI",KEBANGSAAN,,SONG,Sarawak,2
+"SEKOLAH KEBANGSAAN ST HENRY SLABI",KEBANGSAAN,,SERIAN,Sarawak,2
+"SEKOLAH KEBANGSAAN RH TAYAI",KEBANGSAAN,,TATAU,Sarawak,1
+"SEKOLAH KEBANGSAAN SKAROK",KEBANGSAAN,,LUBOK ANTU,Sarawak,1
+"SEKOLAH KEBANGSAAN PENDIDIKAN KHAS (B) KUCHING",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN KPG. ANGUS",KEBANGSAAN,,BEKENU,Sarawak,1
+"SEKOLAH KEBANGSAAN SUNGAI SUGAI",KEBANGSAAN,,PAKAN,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA LIPUS",KEBANGSAAN,,KANOWIT,Sarawak,1
+"SEKOLAH KEBANGSAAN ADIN",KEBANGSAAN,,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN NG BUDU",KEBANGSAAN,,SARATOK,Sarawak,1
+"SEKOLAH KEBANGSAAN ST MARTIN SRI AMAN",KEBANGSAAN,,SRI AMAN,Sarawak,1
+"SEKOLAH KEBANGSAAN NG ENCHEREMIN",KEBANGSAAN,,KAPIT,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG SAIT",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN BALONG",KEBANGSAAN,,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA BON",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN SUNGAI KLAMPAI",KEBANGSAAN,,SARATOK,Sarawak,1
+"SEKOLAH KEBANGSAAN BUKIT PAPIT",KEBANGSAAN,,BINTANGOR,Sarawak,1
+"SEKOLAH KEBANGSAAN LUBOK ASSAM",KEBANGSAAN,,JULAU,Sarawak,1
+"SEKOLAH KEBANGSAAN SEMUKOI",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN BUKIT MAWANG",KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA ENTULOH",KEBANGSAAN,,KAPIT,Sarawak,1
+"SEKOLAH KEBANGSAAN MOREK",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN LEBUR / REMUN",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN NG JAGAU",KEBANGSAAN,,KANOWIT,Sarawak,1
+"SEKOLAH KEBANGSAAN ULU AWIK",KEBANGSAAN,,SARATOK,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) KAI NANG",JENIS KEBANGSAAN (C),,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA KOTA",KEBANGSAAN,,PAKAN,Sarawak,1
+"SEKOLAH KEBANGSAAN PURUH KARU",KEBANGSAAN,,KUCHING,Sarawak,1
+"SEKOLAH KEBANGSAAN GUMBANG",KEBANGSAAN,,BAU,Sarawak,1
+"SEKOLAH KEBANGSAAN SEBANDI ULU",KEBANGSAAN,,ASAJAYA,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) SAN SAN",JENIS KEBANGSAAN (C),,DALAT,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) SAN MING",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN KRAIT",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN SG. SAEH",KEBANGSAAN,,BEKENU,Sarawak,1
+"SEKOLAH KEBANGSAAN SG SETAPANG",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) SING MING SARIKEI",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN SG. SELEPIN",KEBANGSAAN,,MIRI,Sarawak,1
+"SEKOLAH KEBANGSAAN KG SERDENG",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH KEBANGSAAN KPG ALIT",KEBANGSAAN,,KABONG,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BAKAM",JENIS KEBANGSAAN (C),,MIRI,Sarawak,1
+"SEKOLAH KEBANGSAAN ST. BARNABAS",KEBANGSAAN,,DEBAK,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG TUNGAN",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN SG SEPIRING/SG TEPUS",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) PANGKALAN BEDUP",JENIS KEBANGSAAN (C),,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN TABUT",KEBANGSAAN,,BETONG,Sarawak,1
+"SEKOLAH KEBANGSAAN SEGALI",KEBANGSAAN,,SIMUNJAN,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG PELUTAN",KEBANGSAAN,,LONG LAMA,Sarawak,1
+"SEKOLAH KEBANGSAAN MERAPOK",KEBANGSAAN,,LAWAS,Sarawak,1
+"SEKOLAH KEBANGSAAN NG OYAN",KEBANGSAAN,,KAPIT,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG PILLAH",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) SING SHING",JENIS KEBANGSAAN (C),,KANOWIT,Sarawak,1
+"SEKOLAH KEBANGSAAN MERAMBUT",KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH KEBANGSAAN BUNGIN",KEBANGSAAN,,SPAOH,Sarawak,1
+"SEKOLAH KEBANGSAAN KUALA TUTOH",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN NANGA SIKAT",KEBANGSAAN,,MUKAH,Sarawak,1
+"SEKOLAH KEBANGSAAN BRUAN MAPAL",KEBANGSAAN,,MATU,Sarawak,1
+"SEKOLAH KEBANGSAAN STENGIN/SEDARAT",KEBANGSAAN,,ENGKILILI,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) MING CHIANG",JENIS KEBANGSAAN (C),,BINTANGOR,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG APU",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BATU 35",JENIS KEBANGSAAN (C),,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN BERAYANG",KEBANGSAAN,,ROBAN,Sarawak,1
+"SEKOLAH KEBANGSAAN PANDAN",KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH KEBANGSAAN TEMUDOK KEM",KEBANGSAAN,,SRI AMAN,Sarawak,1
+"SEKOLAH KEBANGSAAN ULU ENTABAI",KEBANGSAAN,,JULAU,Sarawak,1
+"SEKOLAH KEBANGSAAN STUNGGANG/TEMELAN",KEBANGSAAN,,LUNDU,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) SIUNG HUA",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN KG KUT",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) SHING KOK",JENIS KEBANGSAAN (C),,KANOWIT,Sarawak,1
+"SEKOLAH KEBANGSAAN SENIBONG SEJERIN",KEBANGSAAN,,LUNDU,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA BANGKONG",JENIS KEBANGSAAN (C),,SRI AMAN,Sarawak,1
+"SEKOLAH KEBANGSAAN LICHOK",KEBANGSAAN,,ROBAN,Sarawak,1
+"SEKOLAH KEBANGSAAN SG PENIPAH",KEBANGSAAN,,MUKAH,Sarawak,1
+"SEKOLAH KEBANGSAAN MUTON",KEBANGSAAN,,DEBAK,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG MIRI",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) HUA KWONG",JENIS KEBANGSAAN (C),,MIRI,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG JEKITAN",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN PA ' DALLIH",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN NG PERARAN",KEBANGSAAN,,KAPIT,Sarawak,1
+"SEKOLAH KEBANGSAAN LEMPA",KEBANGSAAN,,SARATOK,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SEMATAN",JENIS KEBANGSAAN (C),,SEMATAN,Sarawak,1
+"SEKOLAH KEBANGSAAN SUNGAI BAIN",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN PAKU",KEBANGSAAN,,SRI AMAN,Sarawak,1
+"SEKOLAH KEBANGSAAN RUMAH GOYANG",KEBANGSAAN,,BATU NIAH,Sarawak,1
+"SEKOLAH KEBANGSAAN TAN SRI DATUK TEMENGGONG JUGAH",KEBANGSAAN,,SONG,Sarawak,1
+"SEKOLAH KEBANGSAAN SG MENYAN",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN IBAN UNION",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN NG MENJUAU",KEBANGSAAN,,LUBOK ANTU,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) CHUNG HUA SEMERA",JENIS KEBANGSAAN (C),,ASAJAYA,Sarawak,1
+"SEKOLAH KEBANGSAAN KPG. BUNGAI",KEBANGSAAN,,BEKENU,Sarawak,1
+"SEKOLAH KEBANGSAAN TELAHAK",KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH KEBANGSAAN SLDB NO. 1",KEBANGSAAN,,MUKAH,Sarawak,1
+"SEKOLAH KEBANGSAAN BALINGAN",KEBANGSAAN,,BETONG,Sarawak,1
+"SEKOLAH KEBANGSAAN STALON",KEBANGSAAN,,BELAWAI,Sarawak,1
+"SEKOLAH KEBANGSAAN NG ENGKUAH",KEBANGSAAN,,SONG,Sarawak,1
+"SEKOLAH JENIS KEBANGSAAN (CINA) KIEW MANG",JENIS KEBANGSAAN (C),,SARIKEI,Sarawak,1
+"SEKOLAH KEBANGSAAN ENTUBUH",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN SEKENDU",KEBANGSAAN,,SIMUNJAN,Sarawak,1
+"SEKOLAH KEBANGSAAN SELAMPIT",KEBANGSAAN,,LUNDU,Sarawak,1
+"SEKOLAH KEBANGSAAN SG SILAS",KEBANGSAAN,,BINTULU,Sarawak,1
+"SEKOLAH KEBANGSAAN SG LENGAN",KEBANGSAAN,,SIBU,Sarawak,1
+"SEKOLAH KEBANGSAAN SURI",KEBANGSAAN,,DEBAK,Sarawak,1
+"SEKOLAH KEBANGSAAN MUBOK BERAWAN",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG LELLANG",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN KUALA SERUPAI",KEBANGSAAN,,TATAU,Sarawak,1
+"SEKOLAH KEBANGSAAN NG ASSAM",KEBANGSAAN,,SARATOK,Sarawak,1
+"SEKOLAH KEBANGSAAN KG SAWAI",KEBANGSAAN,,DARO,Sarawak,1
+"SEKOLAH KEBANGSAAN KG PALOH",KEBANGSAAN,,KABONG,Sarawak,1
+"SEKOLAH KEBANGSAAN ULU YONG",KEBANGSAAN,,KAPIT,Sarawak,1
+"SEKOLAH KEBANGSAAN SIMPANG KUDA",KEBANGSAAN,,BAU,Sarawak,1
+"SEKOLAH KEBANGSAAN LADANG BARU",KEBANGSAAN,,LAWAS,Sarawak,1
+"SEKOLAH KEBANGSAAN MENDAS",KEBANGSAAN,,SARATOK,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG IKANG",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN KUALA MEDALAM",KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH KEBANGSAAN KUALA BOK",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN SEGUBANG",KEBANGSAAN,,BAU,Sarawak,1
+"SEKOLAH KEBANGSAAN LUBOK TEKUROK",KEBANGSAAN,,LIMBANG,Sarawak,1
+"SEKOLAH KEBANGSAAN SAMARAHAN ESTATE",KEBANGSAAN,,SERIAN,Sarawak,1
+"SEKOLAH KEBANGSAAN BELIONG",KEBANGSAAN,,ASAJAYA,Sarawak,1
+"SEKOLAH KEBANGSAAN KG SEBERANG MUKAH",KEBANGSAAN,,MUKAH,Sarawak,1
+"SEKOLAH KEBANGSAAN LONG BANGA",KEBANGSAAN,,MARUDI,Sarawak,1
+"SEKOLAH KEBANGSAAN KELAPA SAWIT NO. 4",KEBANGSAAN,,BEKENU,Sarawak,1`;
+
+/**
+        * 2. GEOCODING ENGINE
+        */
+const geoLookup = {
+schools: {
+"SEKOLAH MENENGAH KEBANGSAAN TEMENGGONG DATUK LAWAI JAU": { lat: 4.177, lng: 114.333 },
+"SEKOLAH MENENGAH KEBANGSAAN PUJUT": { lat: 4.435, lng: 114.015 },
+"SEKOLAH MENENGAH KEBANGSAAN BINTULU": { lat: 3.194, lng: 113.052 },
+"SEKOLAH MENENGAH KEBANGSAAN DEMAK BARU": { lat: 1.582, lng: 110.398 },
+"SEKOLAH MENENGAH KEBANGSAAN MERBAU MIRI": { lat: 4.440, lng: 114.020 },
+"SEKOLAH MENENGAH KEBANGSAAN KIDURONG": { lat: 3.250, lng: 113.080 },
+"SEKOLAH MENENGAH KEBANGSAAN LUTONG": { lat: 4.470, lng: 114.000 },
+"SEKOLAH MENENGAH KEBANGSAAN DALAT": { lat: 2.750, lng: 111.930 },
+"MRSM MUKAH": { lat: 2.890, lng: 112.090 },
+"SEKOLAH KEBANGSAAN ST PATRICK KUCHING": { lat: 1.550, lng: 110.350 },
+"SEKOLAH KEBANGSAAN PURU SIA": { lat: 4.850, lng: 115.400 },
+"SEKOLAH KEBANGSAAN SG PASSAI": { lat: 2.300, lng: 111.850 },
+"SEKOLAH MENENGAH KEBANGSAAN AGAMA SARATOK": { lat: 1.730, lng: 111.340 },
+"SEKOLAH KEBANGSAAN SIOL KANAN": { lat: 1.590, lng: 110.340 },
+"SEKOLAH MENENGAH KEBANGSAAN MARUDI": { lat: 4.180, lng: 114.330 },
+"SEKOLAH MENENGAH KEBANGSAAN BUKIT LIMA": { lat: 2.280, lng: 111.830 },
+"SEKOLAH MENENGAH KEBANGSAAN D P H ABDUL GAPOR": { lat: 1.530, lng: 110.380 },
+"SEKOLAH KEBANGSAAN AIRPORT": { lat: 2.700, lng: 113.780 },
+"SEKOLAH MENENGAH KEBANGSAAN LIMBANG": { lat: 4.750, lng: 115.010 },
+"SEKOLAH MENENGAH KEBANGSAAN KUALA LOBANG": { lat: 4.425, lng: 113.990 },
+"SEKOLAH MENENGAH KEBANGSAAN SIBU JAYA": { lat: 2.220, lng: 111.805 },
+"SEKOLAH MENENGAH KEBANGSAAN CHUNG HUA MIRI": { lat: 4.400, lng: 113.998 },
+"SEKOLAH MENENGAH KEBANGSAAN SUNGAI MAONG": { lat: 1.545, lng: 110.330 },
+"SEKOLAH MENENGAH KEBANGSAAN LEO MAJANG": { lat: 3.205, lng: 113.065 },
+"SEKOLAH MENENGAH KEBANGSAAN ST. LUKE": { lat: 1.660, lng: 109.850 },
+"SEKOLAH MENENGAH KEBANGSAAN TEEN": { lat: 1.550, lng: 110.300 },
+"SEKOLAH MENENGAH KEBANGSAAN AGAMA SHEIKH HAJI OTHMAN ABDUL WAHAB": { lat: 1.540, lng: 110.355 },
+"SEKOLAH KEBANGSAAN KAMPONG MUHIBAH": { lat: 4.755, lng: 115.005 },
+"SEKOLAH KEBANGSAAN ST. JOSEPH": { lat: 2.290, lng: 111.820 },
+"SEKOLAH KEBANGSAAN KUALA BARAM": { lat: 4.480, lng: 113.990 }
+},
+cities: {
+"KUCHING": { lat: 1.5533, lng: 110.3592 },
+"MIRI": { lat: 4.4148, lng: 114.0089 },
+"SIBU": { lat: 2.3000, lng: 111.8000 },
+"BINTULU": { lat: 3.1711, lng: 113.0417 },
+"LIMBANG": { lat: 4.7600, lng: 115.0000 },
+"SARIKEI": { lat: 2.1167, lng: 111.5167 },
+"SRI AMAN": { lat: 1.2333, lng: 111.4500 },
+"KAPIT": { lat: 2.0167, lng: 112.9333 },
+"KOTA SAMARAHAN": { lat: 1.4667, lng: 110.5000 },
+"SERIAN": { lat: 1.1667, lng: 110.5667 },
+"MUKAH": { lat: 2.8833, lng: 112.0833 },
+"BETONG": { lat: 1.4167, lng: 111.5333 },
+"MARUDI": { lat: 4.1833, lng: 114.3167 },
+"LAWAS": { lat: 4.8667, lng: 115.4000 },
+"BELAGA": { lat: 2.7000, lng: 113.7833 },
+"LUNDU": { lat: 1.6667, lng: 109.8500 },
+"SARATOK": { lat: 1.7333, lng: 111.3500 },
+"SIMUNJAN": { lat: 1.3833, lng: 110.7500 },
+"DALAT": { lat: 2.7500, lng: 111.9333 },
+"ASAJAYA": { lat: 1.5500, lng: 110.6167 },
+"BEKENU": { lat: 4.0667, lng: 113.8500 },
+"DARO": { lat: 2.5167, lng: 111.4333 },
+"ROBAN": { lat: 1.9000, lng: 111.3000 },
+"BARAM": { lat: 4.1833, lng: 114.3167 } 
+}
+};
+
+/**
+        * 3. APP STATE
+        */
+const appState = {
+studentDataRaw: null,
+teacherDataRaw: null,
+mergedData: [],
+filteredData: [],
+filters: {
+search: "",
+type: "all",
+city: "all"
+},
+dataMode: "all", // 'teachers', 'students', 'all'
+visMode: "cluster", // 'cluster', 'heatmap'
+topCityMode: "all", // 'teachers', 'students', 'all'
+topSchoolMode: "all", // 'teachers', 'students', 'all'
+
+// Pagination and Sorting State
+currentPage: 1,
+pageSize: 10,
+sortKey: 'total', // Default sort key
+sortDir: 'desc' // 'asc' or 'desc'
+};
+
+// Map Variables
+let map;
+let markersLayer;
+let heatmapLayer;
+
+// Gemini API configuration
+const apiKey = "";
+const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+/**
+        * 4. UTILITIES & PARSING
+        */
+
+// Simple CSV Parser
+function parseCSV(csvText) {
+const lines = csvText.split('\n').filter(line => line.trim() !== '');
+if (lines.length === 0) return [];
+
+const headers = lines[0].split(',').map(h => h.trim());
+const data = [];
+
+for (let i = 1; i < lines.length; i++) {
+const currentLine = lines[i].split(',');
+
+let rowData = {};
+if (currentLine.length === headers.length) {
+headers.forEach((header, index) => {
+rowData[header] = currentLine[index] ? currentLine[index].trim() : '';
+});
+} else if (currentLine.length > headers.length) {
+// Quick fix for potential commas in school name
+const nameParts = currentLine.slice(0, currentLine.length - headers.length + 1);
+rowData[headers[0]] = nameParts.join(',').trim();
+const rest = currentLine.slice(currentLine.length - headers.length + 1);
+for(let j=0; j<rest.length; j++) {
+rowData[headers[j+1]] = rest[j].trim();
+}
+}
+data.push(rowData);
+}
+return data;
+}
+
+// Function to serialize data back to CSV format
+function dataToCSV(data, userType) {
+// Determine which schools have data for the requested user type
+const relevantSchools = data.filter(d => d[userType] > 0);
+
+if (relevantSchools.length === 0) {
+// Return headers only if no relevant data exists
+return "school_name,school_type,postcode,city,state_name,total_users";
+}
+
+const header = "school_name,school_type,postcode,city,state_name,total_users\n";
+let csvBody = relevantSchools.map(d => {
+// Since mergedData doesn't contain postcode/state_name, we use mock values or empty strings
+// In a real app, this information would be stored explicitly.
+const postcode = ""; // Mock/Empty value
+const state_name = "Sarawak"; // Fixed value
+
+return [
+`"${d.name.replace(/"/g, '""')}"`, // Quote and escape school names
+d.type || "",
+postcode,
+d.city || "",
+state_name,
+d[userType] || 0
+].join(',');
+}).join('\n');
+
+return header + csvBody;
+}
+
+function getCoordinates(schoolName, city) {
+const cleanName = schoolName.toUpperCase().replace(/"/g, '');
+const cleanCity = city.toUpperCase().replace(/"/g, '');
+
+// 1. Try Exact Match
+if (geoLookup.schools[cleanName]) {
+return geoLookup.schools[cleanName];
+}
+
+// 2. Try City Fallback with Jitter (Small random offset)
+if (geoLookup.cities[cleanCity]) {
+const cityCoords = geoLookup.cities[cleanCity];
+const jitter = 0.005; 
+return {
+lat: cityCoords.lat + (Math.random() * jitter - jitter/2),
+lng: cityCoords.lng + (Math.random() * jitter - jitter/2)
+};
+}
+
+// 3. Last Resort
+return { lat: 2.55, lng: 113.0 };
+}
+
+function processAndMergeData() {
+const schoolMap = new Map();
+
+// Process Students
+appState.studentDataRaw.forEach(row => {
+const key = row.school_name;
+if (!schoolMap.has(key)) {
+const coords = getCoordinates(row.school_name, row.city);
+schoolMap.set(key, {
+name: row.school_name.replace(/"/g, ''),
+type: row.school_type,
+city: row.city,
+lat: coords.lat,
+lng: coords.lng,
+students: 0,
+teachers: 0
+});
+}
+schoolMap.get(key).students += parseInt(row.total_users || 0);
+});
+
+// Process Teachers
+appState.teacherDataRaw.forEach(row => {
+const key = row.school_name;
+if (!schoolMap.has(key)) {
+const coords = getCoordinates(row.school_name, row.city);
+schoolMap.set(key, {
+name: row.school_name.replace(/"/g, ''),
+type: row.school_type,
+city: row.city,
+lat: coords.lat,
+lng: coords.lng,
+students: 0,
+teachers: 0
+});
+}
+schoolMap.get(key).teachers += parseInt(row.total_users || 0);
+});
+
+appState.mergedData = Array.from(schoolMap.values()).map(s => ({
+...s,
+total: s.students + s.teachers
+}));
+
+populateFilters();
+updateDashboard();
+}
+
+/**
+        * 5. UI & MAP LOGIC
+        */
+
+function initMap() {
+// Centered on Sarawak
+map = L.map('map').setView([2.5556, 113.3947], 7);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(map);
+
+markersLayer = L.markerClusterGroup({
+showCoverageOnHover: false,
+maxClusterRadius: 50
+});
+map.addLayer(markersLayer);
+}
+
+function populateFilters() {
+// Get unique cities and types
+const cities = new Set();
+const types = new Set();
+
+appState.mergedData.forEach(d => {
+if (d.city) cities.add(d.city);
+if (d.type) types.add(d.type);
+});
+
+// Fill City Select
+const citySelect = document.getElementById('city-filter');
+if (citySelect) {
+citySelect.innerHTML = '<option value="all">All Cities</option>';
+Array.from(cities).sort().forEach(c => {
+const opt = document.createElement('option');
+opt.value = c;
+opt.textContent = c;
+citySelect.appendChild(opt);
+});
+}
+
+// Fill Type Select
+const typeSelect = document.getElementById('type-filter');
+if (typeSelect) {
+typeSelect.innerHTML = '<option value="all">All Types</option>';
+Array.from(types).sort().forEach(t => {
+const opt = document.createElement('option');
+opt.value = t;
+opt.textContent = t;
+typeSelect.appendChild(opt);
+});
+}
+}
+
+function applyFilters() {
+appState.filteredData = appState.mergedData.filter(d => {
+const matchSearch = d.name.toLowerCase().includes(appState.filters.search.toLowerCase());
+const matchCity = appState.filters.city === 'all' || d.city === appState.filters.city;
+const matchType = appState.filters.type === 'all' || d.type === appState.filters.type;
+
+// Only include data relevant to the current toggle mode
+let hasData = false;
+if (appState.dataMode === 'teachers') hasData = d.teachers > 0;
+else if (appState.dataMode === 'students') hasData = d.students > 0;
+else hasData = d.total > 0;
+
+return matchSearch && matchCity && matchType && hasData;
+});
+
+// Reset page to 1 after filtering
+appState.currentPage = 1;
+}
+
+function applySort(data) {
+const key = appState.sortKey;
+const dir = appState.sortDir;
+
+data.sort((a, b) => {
+const valA = a[key] !== undefined ? a[key] : '';
+const valB = b[key] !== undefined ? b[key] : '';
+
+let comparison = 0;
+
+// Check if values are numeric
+if (typeof valA === 'number' && typeof valB === 'number') {
+comparison = valA - valB;
+} else {
+// String comparison
+comparison = String(valA).localeCompare(String(valB));
+}
+
+return dir === 'asc' ? comparison : comparison * -1;
+});
+return data;
+}
+
+// Function to calculate and sort city user counts
+function calculateTopCities(data, key) {
+const cityCounts = {};
+data.forEach(d => {
+// Ensure the data point has the key before accessing it
+if (d[key] !== undefined) {
+cityCounts[d.city] = (cityCounts[d.city] || 0) + d[key];
+}
+});
+
+return Object.entries(cityCounts)
+.map(([city, count]) => ({ city, count }))
+.sort((a, b) => b.count - a.count)
+.slice(0, 10);
+}
+
+// Function to render the top 10 list
+function renderTopCities(data) {
+const topCitiesList = document.getElementById('top-cities-list');
+const topCitiesLabel = document.getElementById('top-cities-label');
+
+if (!topCitiesList || !topCitiesLabel) return; // Safety check
+
+topCitiesList.innerHTML = '';
+
+const key = appState.topCityMode === 'students' ? 'students' : 
+appState.topCityMode === 'teachers' ? 'teachers' : 'total';
+
+const color = appState.topCityMode === 'students' ? 'text-indigo-700' : 
+appState.topCityMode === 'teachers' ? 'text-orange-700' : 'text-emerald-700';
+
+const keyDisplay = key.charAt(0).toUpperCase() + key.slice(1);
+topCitiesLabel.textContent = `Top 10 Cities By ${keyDisplay}`;
+
+const top10 = calculateTopCities(data, key);
+
+if (top10.length === 0) {
+topCitiesList.innerHTML = `<div class="text-sm text-gray-500 text-center py-2">No data available for this filter.</div>`;
+return;
+}
+
+top10.forEach((item, index) => {
+const listItem = document.createElement('div');
+listItem.className = `flex justify-between items-center text-sm p-1 rounded hover:bg-gray-100`;
+listItem.innerHTML = `
+                   <span class="font-semibold text-gray-800">${index + 1}. ${item.city}</span>
+                   <span class="font-bold ${color}">${item.count.toLocaleString()}</span>
+               `;
+topCitiesList.appendChild(listItem);
+});
+}
+
+// Function to render the top 10 schools list
+function renderTopSchools(data) {
+const topSchoolsList = document.getElementById('top-schools-list');
+const topSchoolsLabel = document.getElementById('top-schools-label');
+
+if (!topSchoolsList || !topSchoolsLabel) return; // Safety check
+
+topSchoolsList.innerHTML = '';
+
+// Use the new topSchoolMode state
+const key = appState.topSchoolMode === 'students' ? 'students' : 
+appState.topSchoolMode === 'teachers' ? 'teachers' : 'total';
+
+const color = appState.topSchoolMode === 'students' ? 'text-indigo-700' : 
+appState.topSchoolMode === 'teachers' ? 'text-orange-700' : 'text-emerald-700';
+
+const keyDisplay = key.charAt(0).toUpperCase() + key.slice(1);
+topSchoolsLabel.textContent = `Top 10 Schools by ${keyDisplay}`;
+
+
+// Sort data by the selected key (descending) and take the top 10
+const top10 = [...data]
+.sort((a, b) => b[key] - a[key]) // Use dynamic key for sorting
+.slice(0, 10);
+
+if (top10.length === 0) {
+topSchoolsList.innerHTML = `<div class="text-sm text-gray-500 text-center py-2">No data available for this filter.</div>`;
+return;
+}
+
+top10.forEach((item, index) => {
+const countVal = item[key]; // Get the count based on the key
+const schoolNameDisplay = item.name.length > 25 ? item.name.substring(0, 22) + '...' : item.name;
+const listItem = document.createElement('div');
+listItem.className = `flex justify-between items-center text-sm p-1 rounded hover:bg-gray-100 group`;
+listItem.innerHTML = `
+                   <span class="font-semibold text-gray-800 group-hover:text-blue-600" title="${item.name}">${index + 1}. ${schoolNameDisplay}</span>
+                   <span class="font-bold ${color}">${countVal.toLocaleString()}</span>
+               `;
+topSchoolsList.appendChild(listItem);
+});
+}
+
+
+function updateStats(data) {
+const totalStudents = data.reduce((sum, d) => sum + d.students, 0);
+const totalTeachers = data.reduce((sum, d) => sum + d.teachers, 0);
+const totalCombined = totalStudents + totalTeachers;
+
+// Update main header badges
+const elSchoolsBadge = document.getElementById('total-schools-badge');
+if (elSchoolsBadge) elSchoolsBadge.textContent = `${data.length} Schools`;
+
+const elUsersBadge = document.getElementById('total-users-badge');
+if (elUsersBadge) elUsersBadge.textContent = `${totalCombined.toLocaleString()} Users`;
+
+// Update Key Metrics Panel (Static Counts)
+const elStatStudents = document.getElementById('stat-students');
+if (elStatStudents) elStatStudents.textContent = totalStudents.toLocaleString();
+
+const elStatTeachers = document.getElementById('stat-teachers');
+if (elStatTeachers) elStatTeachers.textContent = totalTeachers.toLocaleString();
+
+const elStatTotal = document.getElementById('stat-total');
+if (elStatTotal) elStatTotal.textContent = totalCombined.toLocaleString();
+
+// Update Top 10 Lists
+renderTopCities(data);
+renderTopSchools(data); 
+}
+
+function updatePaginationControls(totalRecords) {
+const pageSize = appState.pageSize;
+const currentPage = appState.currentPage;
+const totalPages = Math.ceil(totalRecords / pageSize);
+
+const start = totalRecords === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+const end = Math.min(currentPage * pageSize, totalRecords);
+
+// Use null checks to prevent errors if elements are missing
+const startEl = document.getElementById('pagination-start');
+if (startEl) startEl.textContent = start.toLocaleString();
+
+const endEl = document.getElementById('pagination-end');
+if (endEl) endEl.textContent = end.toLocaleString();
+
+const totalEl = document.getElementById('pagination-total');
+if (totalEl) totalEl.textContent = totalRecords.toLocaleString();
+
+const prevButtons = [document.getElementById('prev-page'), document.getElementById('prev-page-bottom')];
+const nextButtons = [document.getElementById('next-page'), document.getElementById('next-page-bottom')];
+const currentPageDisplays = [document.getElementById('current-page-display'), document.getElementById('current-page-display-bottom')];
+
+prevButtons.forEach(btn => { if(btn) btn.disabled = currentPage === 1; });
+nextButtons.forEach(btn => { if(btn) btn.disabled = currentPage >= totalPages || totalRecords === 0; });
+currentPageDisplays.forEach(span => { if(span) span.textContent = `${currentPage} / ${totalPages > 0 ? totalPages : 1}`; });
+}
+
+function renderDataTable() {
+const data = applySort([...appState.filteredData]); // Sort a copy of filtered data
+
+updatePaginationControls(data.length);
+
+const pageSize = appState.pageSize;
+const currentPage = appState.currentPage;
+const startIndex = (currentPage - 1) * pageSize;
+const paginatedData = data.slice(startIndex, startIndex + pageSize);
+
+const tableBody = document.createElement('tbody');
+const tableHeader = document.createElement('thead');
+const table = document.getElementById('data-table');
+const modeLabel = document.getElementById('table-mode-label');
+
+if (modeLabel) {
+const mode = appState.dataMode;
+const modeText = mode.charAt(0).toUpperCase() + mode.slice(1);
+modeLabel.textContent = (mode === 'all' ? 'All' : modeText) + (mode === 'all' ? ' Users' : ' Only');
+}
+
+if (!table) return; // Safety check
+
+// Define columns and their sort keys
+const columns = [
+{ key: 'name', title: 'School Name' },
+{ key: 'city', title: 'City' },
+{ key: 'type', title: 'Type' }
+];
+
+const mode = appState.dataMode;
+if (mode === 'all') {
+columns.push({ key: 'teachers', title: 'Teachers' });
+columns.push({ key: 'students', title: 'Students' });
+columns.push({ key: 'total', title: 'Total Users' });
+} else if (mode === 'teachers') {
+columns.push({ key: 'teachers', title: 'Teachers' });
+} else if (mode === 'students') {
+columns.push({ key: 'students', title: 'Students' });
+}
+
+// Render Header with Sort Indicators
+let headerRowHtml = '<tr>';
+columns.forEach(col => {
+let sortClass = 'sortable';
+if (appState.sortKey === col.key) {
+sortClass += appState.sortDir === 'asc' ? ' asc' : ' desc';
+}
+
+headerRowHtml += `<th 
+                   class="px-6 py-3 text-left text-base font-medium text-gray-500 uppercase tracking-wider ${sortClass}" 
+                   data-sort-key="${col.key}"
+               >${col.title}</th>`;
+});
+headerRowHtml += '</tr>';
+tableHeader.innerHTML = headerRowHtml;
+
+// Clear and Append Header
+table.innerHTML = '';
+table.appendChild(tableHeader);
+
+// Attach sort listeners after rendering header
+tableHeader.querySelectorAll('th.sortable').forEach(th => {
+th.removeEventListener('click', handleSort); // Prevent double-binding
+th.addEventListener('click', handleSort);
+});
+
+
+// Render Body
+paginatedData.forEach(d => {
+let rowHtml = '<tr class="bg-white even:bg-gray-50 hover:bg-blue-50">';
+columns.forEach(col => {
+let value = d[col.key] || '-';
+if (['teachers', 'students', 'total'].includes(col.key)) {
+const colorClass = col.key === 'teachers' ? 'text-orange-600' : 
+col.key === 'students' ? 'text-indigo-600' : 'text-emerald-700';
+rowHtml += `<td class="px-6 py-4 whitespace-nowrap text-base font-medium ${colorClass}">${value.toLocaleString()}</td>`;
+} else {
+rowHtml += `<td class="px-6 py-4 text-base text-gray-900">${value}</td>`;
+}
+});
+rowHtml += '</tr>';
+tableBody.insertAdjacentHTML('beforeend', rowHtml);
+});
+
+table.appendChild(tableBody);
+}
+
+function handleSort(event) {
+const newSortKey = event.currentTarget.getAttribute('data-sort-key');
+
+if (appState.sortKey === newSortKey) {
+// Toggle direction if same key is clicked
+appState.sortDir = appState.sortDir === 'asc' ? 'desc' : 'asc';
+} else {
+// Set new key, default to descending for numerical values, ascending for strings
+appState.sortKey = newSortKey;
+if (['teachers', 'students', 'total'].includes(newSortKey)) {
+appState.sortDir = 'desc';
+} else {
+appState.sortDir = 'asc';
+}
+}
+appState.currentPage = 1; // Reset to first page after sorting
+updateDashboard();
+}
+
+function updateMapVisualization(data) {
+// Clear existing layers
+markersLayer.clearLayers();
+if (heatmapLayer) {
+map.removeLayer(heatmapLayer);
+heatmapLayer = null;
+}
+
+if (appState.visMode === 'cluster') {
+const legend = document.getElementById('heatmap-legend');
+if (legend) legend.classList.add('hidden');
+
+data.forEach(d => {
+let countVal = 0;
+if (appState.dataMode === 'all') countVal = d.total;
+if (appState.dataMode === 'students') countVal = d.students;
+if (appState.dataMode === 'teachers') countVal = d.teachers;
+
+const marker = L.marker([d.lat, d.lng], { title: d.name });
+
+const popupContent = `
+                       <div class="p-2 font-sans">
+                           <h3 class="font-bold text-lg text-blue-800 mb-1 border-b border-blue-100 pb-1">${d.name}</h3>
+                           <p class="text-sm text-gray-500 mb-2">${d.city} | ${d.type}</p>
+                           <div class="grid grid-cols-2 gap-2 text-base">
+                               <div class="${appState.dataMode === 'teachers' ? 'font-bold text-orange-600' : ''}">
+                                   Teachers: ${d.teachers.toLocaleString()}
+                               </div>
+                               <div class="${appState.dataMode === 'students' ? 'font-bold text-indigo-600' : ''}">
+                                   Students: ${d.students.toLocaleString()}
+                               </div>
+                           </div>
+                           <div class="mt-2 pt-2 border-t border-gray-100 font-bold text-center text-lg text-green-700">
+                               Total: ${d.total.toLocaleString()}
+                           </div>
+                       </div>
+                   `;
+
+marker.bindPopup(popupContent);
+
+// Add custom tooltip for quick view
+marker.bindTooltip(`${d.name}: ${countVal.toLocaleString()}`, { direction: 'top' });
+
+markersLayer.addLayer(marker);
+});
+map.addLayer(markersLayer);
+
+} else if (appState.visMode === 'heatmap') {
+const legend = document.getElementById('heatmap-legend');
+if (legend) legend.classList.remove('hidden');
+
+// Calculate max for scaling intensity
+let maxVal = 0;
+const points = data.map(d => {
+let val = 0;
+if (appState.dataMode === 'all') val = d.total;
+if (appState.dataMode === 'students') val = d.students;
+if (appState.dataMode === 'teachers') val = d.teachers;
+if (val > maxVal) maxVal = val;
+return { lat: d.lat, lng: d.lng, count: val };
+});
+
+// Normalize intensity (0.0 to 1.0) 
+const heatPoints = points.map(p => [p.lat, p.lng, (p.count / maxVal) * 5]); 
+
+heatmapLayer = L.heatLayer(heatPoints, {
+radius: 25,
+blur: 15,
+maxZoom: 10,
+gradient: {
+0.1: '#fef08a', // Light Yellow (Tailwind yellow-200)
+0.4: '#facc15', // Yellow-400
+0.6: '#4ade80', // Green-400
+1.0: '#14532d'  // Dark Green (Green-900)
+}
+}).addTo(map);
+}
+}
+
+
+function updateDashboard() {
+applyFilters();
+const data = appState.filteredData;
+
+updateStats(data);
+renderDataTable(); 
+updateMapVisualization(data);
+}
+
+// Custom Modal Function to replace alert()
+function showModal(title, message, isError = false, isAnalysis = false) {
+const existingModal = document.getElementById('custom-modal');
+if (existingModal) existingModal.remove();
+
+const bgColor = isError ? 'bg-red-600' : isAnalysis ? 'bg-violet-700' : 'bg-green-600';
+const btnColor = isError ? 'bg-red-500 hover:bg-red-600' : isAnalysis ? 'bg-violet-500 hover:bg-violet-600' : 'bg-green-500 hover:bg-green-600';
+
+const modal = document.createElement('div');
+modal.id = 'custom-modal';
+modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-[5000] transition-opacity duration-300';
+modal.innerHTML = `
+               <div class="bg-white p-6 rounded-xl shadow-2xl max-w-lg w-11/12 md:w-full max-h-[80vh] overflow-y-auto transform transition-transform duration-300 scale-95 opacity-0" id="modal-content">
+                   <h4 class="text-xl font-bold mb-3 ${isError ? 'text-red-700' : isAnalysis ? 'text-violet-700' : 'text-green-700'}">${title}</h4>
+                   <div class="text-gray-700 mb-4 whitespace-pre-wrap">${message}</div>
+                   <button onclick="document.getElementById('custom-modal').remove()" class="mt-2 px-4 py-2 ${btnColor} text-white rounded-lg font-semibold transition">OK</button>
+               </div>
+           `;
+document.body.appendChild(modal);
+// Trigger animation
+setTimeout(() => {
+document.getElementById('modal-content').classList.remove('scale-95', 'opacity-0');
+}, 10);
+}
+
+/**
+        * 6. SAVE TO CODE LOGIC
+        */
+const SECRET_PASSWORD_BASE64 = "UGFuZGFpQEA4ODg4"; // "Pandai@@8888" encoded in Base64
+
+function handleSaveToCode() {
+// Target elements inside the modal
+const passwordInput = document.getElementById('save-password-modal');
+const password = passwordInput.value;
+
+// Encode the user's input to compare with the stored hash
+if (btoa(password) !== SECRET_PASSWORD_BASE64) {
+showModal("Access Denied", "The password you entered is incorrect. Data was not saved.", true);
+passwordInput.value = ''; // Clear password
+return;
+}
+
+// 1. Generate new CSV strings from the current merged data
+const newStudentCSV = dataToCSV(appState.mergedData, 'students');
+const newTeacherCSV = dataToCSV(appState.mergedData, 'teachers');
+
+// 2. Simulate saving by updating the hardcoded variables
+defaultStudentCSV = newStudentCSV;
+defaultTeacherCSV = newTeacherCSV;
+
+// 3. Log the new data for the user to manually copy (since we can't write to the file system)
+console.log("--- START NEW DEFAULT STUDENT CSV DATA (Copy this) ---");
+console.log(defaultStudentCSV);
+console.log("--- END NEW DEFAULT STUDENT CSV DATA ---");
+
+console.log("--- START NEW DEFAULT TEACHER CSV DATA (Copy this) ---");
+console.log(defaultTeacherCSV);
+console.log("--- END NEW DEFAULT TEACHER CSV DATA ---");
+
+
+// 4. Reset state and refresh dashboard 
+appState.studentDataRaw = parseCSV(defaultStudentCSV);
+appState.teacherDataRaw = parseCSV(defaultTeacherCSV);
+processAndMergeData();
+
+showModal("Save Successful", "The new data has been saved to the dashboard's internal default variables. The dashboard is now based on this permanent data.");
+
+passwordInput.value = ''; // Clear password on success
+document.getElementById('data-management-modal').classList.add('hidden'); // Close modal
+}
+
+/**
+        * 7. GEMINI API LLM INTEGRATION: Strategic Query Tool
+        */
+
+async function generateStrategicQuery() {
+const userQuery = document.getElementById('llm-query-input').value.trim();
+
+// Check for API key
+const userApiKey = localStorage.getItem('gemini_api_key');
+if (!userApiKey) {
+showModal("API Key Missing", "Please enter your Google Gemini API Key in the Settings & Data menu first.", true);
+return;
+}
+
+if (!userQuery) {
+showModal("Input Required", "Please enter your strategic question or use case (e.g., 'Where should I focus resources to increase teacher adoption?').", true);
+return;
+}
+
+// Disable button and show spinner
+const btn = document.getElementById('ai-query-button');
+const originalContent = btn.innerHTML;
+btn.disabled = true;
+btn.innerHTML = '<div class="spinner mr-2"></div> Generating Insight...';
+
+const totalStudents = appState.filteredData.reduce((sum, d) => sum + d.students, 0);
+const totalTeachers = appState.filteredData.reduce((sum, d) => sum + d.teachers, 0);
+const totalCombined = totalStudents + totalTeachers;
+
+// Calculate engagement ratios and top performing areas
+const studentToTeacherRatio = totalTeachers > 0 ? (totalStudents / totalTeachers).toFixed(1) : 'Undefined (Zero Teachers)';
+const top5Cities = calculateTopCities(appState.filteredData, 'total').slice(0, 5).map(c => `${c.city} (${c.count.toLocaleString()} users)`).join('; ');
+
+// Get detailed school data for fine-grained analysis (up to 50 for context, sorted by total users)
+const schoolsForContext = applySort([...appState.filteredData])
+.slice(0, 50)
+.map(d => `${d.name} in ${d.city} (${d.type}) | Students: ${d.students} | Teachers: ${d.teachers} | Total: ${d.total}`)
+.join('\n');
+
+
+// Determine current filters
+const currentFilters = [];
+if (appState.filters.city !== 'all') currentFilters.push(`City Filter: ${appState.filters.city}`);
+if (appState.filters.type !== 'all') currentFilters.push(`School Type Filter: ${appState.filters.type}`);
+if (appState.filters.search) currentFilters.push(`School Search: ${appState.filters.search}`);
+
+const filterContext = currentFilters.length > 0 ? `(FILTERS: ${currentFilters.join('; ')})` : '(FILTERS: None - Showing all Sarawak data)';
+
+const dataSnapshot = `
+--- DATA CONTEXT ---
+${filterContext}
+Total Schools in View: ${appState.filteredData.length}
+Total Students: ${totalStudents.toLocaleString()}
+Total Teachers: ${totalTeachers.toLocaleString()}
+Student/Teacher Ratio: 1:${studentToTeacherRatio}
+Top 5 Cities (by Total Users): ${top5Cities}
+
+--- SCHOOL LEVEL DATA (Top 50 Only) ---
+${schoolsForContext}
+
+--- USER QUERY ---
+${userQuery}
+           `;
+
+const systemPrompt = "You are an expert strategic analyst for the Pandai educational platform. You must answer the user's query by strictly referencing the provided data context (Sarawak school usage statistics) and translating those statistics into actionable business insights. Structure your answer clearly with the following sections: 1) Executive Summary (Direct answer to the query). 2) Data Rationale (Specific data points supporting your answer). 3) Actionable Recommendation (Next step based on the insight).";
+
+const dynamicApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${userApiKey}`;
+
+try {
+const payload = {
+contents: [{ parts: [{ text: dataSnapshot }] }],
+systemInstruction: { parts: [{ text: systemPrompt }] },
+};
+
+const response = await fetch(dynamicApiUrl, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify(payload)
+});
+
+const result = await response.json();
+
+if (result.error) {
+throw new Error(result.error.message || "API Error");
+}
+
+const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "The analysis engine returned an empty response. Please try rephrasing your query.";
+
+showModal("✨ Strategic Insight Result", text, false, true);
+
+} catch (error) {
+console.error('Gemini API Error:', error);
+showModal("API Error", `Failed to connect to Gemini: ${error.message}. Please check your API Key.`, true);
+} finally {
+// Re-enable button
+btn.disabled = false;
+btn.innerHTML = originalContent;
+}
+}
+
+// Unified file upload handler
+function handleModalFileUpload(type) {
+return function(e) {
+const file = e.target.files[0];
+if (!file) return;
+
+const reader = new FileReader();
+reader.onload = function(e) {
+const text = e.target.result;
+if (type === 'student') appState.studentDataRaw = parseCSV(text);
+else appState.teacherDataRaw = parseCSV(text);
+
+processAndMergeData();
+// Custom message to emphasize that data is temporary until save button is pressed
+showModal("Data Loaded Temporarily", `${type.charAt(0).toUpperCase() + type.slice(1)} data loaded and dashboard refreshed. This change is TEMPORARY. Click 'Save Data to Code' with the password to make it permanent.`);
+};
+reader.readAsText(file);
+}
+}
+
+function handleSaveApiKey() {
+const keyInput = document.getElementById('api-key-input');
+const key = keyInput.value.trim();
+
+if (key) {
+localStorage.setItem('gemini_api_key', key);
+showModal("Success", "API Key saved securely to your browser's Local Storage.");
+keyInput.value = ''; // Clear input for security
+} else {
+showModal("Error", "Please enter a valid API Key.", true);
+}
+}
+
+// Helper to safely add event listener only if element exists
+function safeAddEventListener(id, event, handler) {
+const el = document.getElementById(id);
+if (el) {
+el.addEventListener(event, handler);
+}
+}
+
+
+/**
+        * 8. EVENT LISTENERS
+        */
+function handlePaginationClick(direction) {
+const totalPages = Math.ceil(appState.filteredData.length / appState.pageSize);
+
+if (direction === 'next' && appState.currentPage < totalPages) {
+appState.currentPage++;
+} else if (direction === 'prev' && appState.currentPage > 1) {
+appState.currentPage--;
+}
+renderDataTable(); // Only re-render the table, as stats/map data is unchanged
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+initMap();
+
+// Load Defaults
+appState.studentDataRaw = parseCSV(defaultStudentCSV);
+appState.teacherDataRaw = parseCSV(defaultTeacherCSV);
+processAndMergeData();
+
+// Search
+safeAddEventListener('search-input', 'input', (e) => {
+appState.filters.search = e.target.value;
+updateDashboard();
+});
+
+// Filters
+safeAddEventListener('type-filter', 'change', (e) => {
+appState.filters.type = e.target.value;
+updateDashboard();
+});
+safeAddEventListener('city-filter', 'change', (e) => {
+appState.filters.city = e.target.value;
+updateDashboard();
+});
+
+// Data Toggles (Radio for Map/Table Mode)
+document.querySelectorAll('input[name="data-mode"]').forEach(radio => {
+radio.addEventListener('change', (e) => {
+appState.dataMode = e.target.value;
+updateDashboard();
+});
+});
+
+// Vis Toggle (Checkbox)
+safeAddEventListener('vis-toggle', 'change', (e) => {
+appState.visMode = e.target.checked ? 'heatmap' : 'cluster';
+updateDashboard();
+});
+
+// Top 10 Toggle (Radio for Top 10 list view) - CITIES
+document.querySelectorAll('input[name="top10-city-mode"]').forEach(radio => {
+radio.addEventListener('change', (e) => {
+appState.topCityMode = e.target.value;
+renderTopCities(appState.filteredData);
+});
+});
+
+// Top 10 Toggle (Radio for Top 10 list view) - SCHOOLS
+document.querySelectorAll('input[name="top10-school-mode"]').forEach(radio => {
+radio.addEventListener('change', (e) => {
+appState.topSchoolMode = e.target.value;
+renderTopSchools(appState.filteredData);
+});
+});
+
+// Pagination Controls
+safeAddEventListener('page-size', 'change', (e) => {
+appState.pageSize = parseInt(e.target.value);
+appState.currentPage = 1;
+renderDataTable();
+});
+
+// Use the safer array filter pattern for pagination buttons
+const prevPageButtons = [document.getElementById('prev-page'), document.getElementById('prev-page-bottom')].filter(b => b);
+const nextPageButtons = [document.getElementById('next-page'), document.getElementById('next-page-bottom')].filter(b => b);
+
+prevPageButtons.forEach(btn => btn.addEventListener('click', () => handlePaginationClick('prev')));
+nextPageButtons.forEach(btn => btn.addEventListener('click', () => handlePaginationClick('next')));
+
+// MODAL UI LISTENERS
+const dataModal = document.getElementById('data-management-modal');
+
+safeAddEventListener('open-data-modal-button', 'click', () => {
+if(dataModal) dataModal.classList.remove('hidden');
+});
+
+safeAddEventListener('close-data-modal-button', 'click', () => {
+if(dataModal) dataModal.classList.add('hidden');
+});
+
+// MODAL FILE & SAVE LISTENERS
+safeAddEventListener('student-upload-modal', 'change', handleModalFileUpload('student'));
+safeAddEventListener('teacher-upload-modal', 'change', handleModalFileUpload('teacher'));
+safeAddEventListener('save-data-button-modal', 'click', handleSaveToCode);
+safeAddEventListener('save-api-key-button', 'click', handleSaveApiKey);
+
+// LLM Query Listener
+safeAddEventListener('ai-query-button', 'click', generateStrategicQuery);
+});
+</script>
+</body>
+</html>
