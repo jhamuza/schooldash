@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sarawak Pandai Usage Dashboard</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+
+    <style>
+        /* Allow natural scrolling for the whole page */
+        body { 
+            min-height: 100vh;
+            overflow-y: auto;
+        }
+
+        /* Enforce map height so it doesn't collapse */
+        #map { 
+            height: 600px; 
+            width: 100%; 
+            z-index: 1; 
+        }
+
+        .stat-card { transition: all 0.3s ease; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        
+        /* Custom Scrollbar for sidebar */
+        aside::-webkit-scrollbar { width: 6px; }
+        aside::-webkit-scrollbar-track { background: #f1f1f1; }
+        aside::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
+        aside::-webkit-scrollbar-thumb:hover { background: #555; }
+        
+        /* Table styling */
+        #data-table th, #data-table td { 
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+        }
+        
+        /* Custom sorting indicator */
+        .sortable { cursor: pointer; user-select: none; }
+        .sortable.asc:after { content: " ▲"; }
+        .sortable.desc:after { content: " ▼"; }
+        
+        /* Loading spinner */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-top: 4px solid #4f46e5;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5000;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-blue-900 text-white p-4 shadow-md flex justify-between items-center z-20 shrink-0">
+        <div>
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0121 18.382V7.618a1 1 0 01-.806-.98l-4.553-2.276M15 7l-5.447-2.724A1 1 0 019 3.382V14.146a1 1 0 01-.806.98L3 16.382"></path></svg>
+                Sarawak Pandai Dashboard
+            </h1>
+            <p class="text-blue-200 text-base">Geospatial visualization of Student & Teacher distribution</p>
+        </div>
+        <div class="flex gap-3 items-center">
+             <!-- Update Data Button -->
+             <button id="open-data-modal-button" class="px-4 py-2 bg-blue-700 text-white font-semibold rounded-lg hover:bg-blue-600 transition flex items-center gap-2 text-sm shadow-md">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                Settings & Data
+             </button>
+             
+             <div class="text-right text-sm">
+                 <span id="total-schools-badge" class="bg-blue-700 px-3 py-1 rounded-full">0 Schools</span>
+                 <span id="total-users-badge" class="bg-green-600 px-3 py-1 rounded-full">0 Users</span>
+             </div>
+        </div>
+    </header>
+    
+    <!-- Key Metrics Panel -->
+    <div id="key-metrics-panel" class="bg-white p-4 shadow-md border-b border-gray-200 z-10 shrink-0">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <!-- Metrics -->
+            <div class="stat-card bg-indigo-50 p-3 rounded border border-indigo-100">
+                <div class="text-xs text-indigo-500 uppercase font-bold">Students</div>
+                <div id="stat-students" class="text-4xl font-bold text-indigo-800">0</div>
+            </div>
+            <div class="stat-card bg-orange-50 p-3 rounded border border-orange-100">
+                <div class="text-xs text-orange-500 uppercase font-bold">Teachers</div>
+                <div id="stat-teachers" class="text-4xl font-bold text-orange-800">0</div>
+            </div>
+            <div class="stat-card bg-emerald-50 p-3 rounded border border-emerald-100">
+                <div class="text-xs text-emerald-500 uppercase font-bold">Total Active Users</div>
+                <div id="stat-total" class="text-4xl font-bold text-emerald-800">0</div>
+            </div>
+            
+            <!-- Top 10 Cities -->
+            <div class="md:col-span-1 bg-gray-50 p-3 rounded border border-gray-100 flex flex-col">
+                <div id="top-cities-label" class="text-xs text-gray-500 uppercase font-bold mb-2">Top 10 Cities By All Users</div>
+                <div class="flex bg-gray-200 rounded p-0.5 mb-2">
+                    <label class="flex-1 text-center cursor-pointer">
+                        <input type="radio" name="top10-city-mode" value="all" class="hidden peer" checked>
+                        <span class="block text-sm py-1 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-emerald-600 transition">All</span>
+                    </label>
+                    <label class="flex-1 text-center cursor-pointer">
+                        <input type="radio" name="top10-city-mode" value="students" class="hidden peer">
+                        <span class="block text-sm py-1 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-indigo-600 transition">Students</span>
+                    </label>
+                    <label class="flex-1 text-center cursor-pointer">
+                        <input type="radio" name="top10-city-mode" value="teachers" class="hidden peer">
+                        <span class="block text-sm py-1 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-orange-600 transition">Teachers</span>
+                    </label>
+                </div>
+                <div id="top-cities-list" class="space-y-1 text-sm overflow-y-auto max-h-32"></div>
+            </div>
+
+            <!-- Top 10 Schools -->
+            <div class="md:col-span-1 bg-gray-50 p-3 rounded border border-gray-100 flex flex-col">
+                <div id="top-schools-label" class="text-xs text-gray-500 uppercase font-bold mb-2">Top 10 Schools by All Users</div>
+                <div class="flex bg-gray-200 rounded p-0.5 mb-2">
+                    <label class="flex-1 text-center cursor-pointer">
+                        <input type="radio" name="top10-school-mode" value="all" class="hidden peer" checked>
+                        <span class="block text-sm py-1 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-emerald-600 transition">All</span>
+                    </label>
+                    <label class="flex-1 text-center cursor-pointer">
+                        <input type="radio" name="top10-school-mode" value="students" class="hidden peer">
+                        <span class="block text-sm py-1 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-indigo-600 transition">Students</span>
+                    </label>
+                    <label class="flex-1 text-center cursor-pointer">
+                        <input type="radio" name="top10-school-mode" value="teachers" class="hidden peer">
+                        <span class="block text-sm py-1 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-orange-600 transition">Teachers</span>
+                    </label>
+                </div>
+                <div id="top-schools-list" class="space-y-1 text-sm overflow-y-auto max-h-32"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area (Map + Sidebar) - REMOVED h-screen/overflow-hidden constraints -->
+    <div class="flex flex-col md:flex-row w-full">
+        
+        <!-- Sidebar Controls -->
+        <aside class="w-full md:w-80 bg-white shadow-lg z-10 flex flex-col border-r border-gray-200 shrink-0">
+            <div class="p-5 space-y-5">
+                <!-- Search -->
+                <div>
+                    <label class="block text-sm font-bold text-gray-500 uppercase mb-1">Search School</label>
+                    <input type="text" id="search-input" placeholder="e.g. SMK Pujut" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-base">
+                </div>
+
+                <!-- Filters -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-500 uppercase mb-1">School Type</label>
+                        <select id="type-filter" class="w-full px-2 py-2 border border-gray-300 rounded text-base focus:ring-2 focus:ring-blue-500">
+                            <option value="all">All Types</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-500 uppercase mb-1">City</label>
+                        <select id="city-filter" class="w-full px-2 py-2 border border-gray-300 rounded text-base focus:ring-2 focus:ring-blue-500">
+                            <option value="all">All Cities</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Data Toggle -->
+                <div>
+                    <label class="block text-sm font-bold text-gray-500 uppercase mb-2">Data Source</label>
+                    <div class="flex bg-gray-200 rounded p-1">
+                        <label class="flex-1 text-center cursor-pointer">
+                            <input type="radio" name="data-mode" value="teachers" class="hidden peer">
+                            <span class="block text-sm py-1.5 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-orange-600 transition">Teachers</span>
+                        </label>
+                        <label class="flex-1 text-center cursor-pointer">
+                            <input type="radio" name="data-mode" value="students" class="hidden peer">
+                            <span class="block text-sm py-1.5 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-indigo-600 transition">Students</span>
+                        </label>
+                        <label class="flex-1 text-center cursor-pointer">
+                            <input type="radio" name="data-mode" value="all" class="hidden peer" checked>
+                            <span class="block text-sm py-1.5 rounded peer-checked:bg-white peer-checked:shadow peer-checked:font-bold peer-checked:text-emerald-600 transition">All</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Visualization Toggle -->
+                <div>
+                    <label class="block text-sm font-bold text-gray-500 uppercase mb-2">Visualization Mode</label>
+                    <div class="flex items-center justify-between border p-2 rounded bg-white">
+                        <span class="text-base text-gray-600">Cluster Markers</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="vis-toggle" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
+                        <span class="text-base text-gray-600">Heatmap</span>
+                    </div>
+                </div>
+                
+                <!-- LLM Strategic Query Tool -->
+                <div class="pt-4 border-t border-gray-200">
+                    <h4 class="font-semibold text-gray-700 mb-2 text-base flex items-center gap-1">
+                        <svg class="w-4 h-4 text-violet-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 10.414V14a1 1 0 102 0v-3.586l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd"></path></svg>
+                        Strategic Query Tool
+                    </h4>
+                    <p class="text-xs text-gray-500 mb-2">Requires Gemini API Key in Settings</p>
+                    <textarea id="llm-query-input" rows="3" placeholder="E.g., Which cities show high student engagement but low teacher count?" class="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 mb-2"></textarea>
+                    <button id="ai-query-button" class="w-full px-3 py-3 bg-violet-600 text-white font-bold rounded-lg hover:bg-violet-700 transition flex items-center justify-center gap-2">
+                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 20v-3m0 0l-3 3m3-3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0zM12 10V7"></path></svg>
+                        Get Strategic Insight
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Map Container (Right Side) -->
+        <main class="flex-1 relative">
+            <div id="map" class="w-full"></div>
+            
+            <!-- Legend Overlay -->
+            <div id="heatmap-legend" class="hidden absolute bottom-8 right-8 bg-white p-3 rounded shadow-lg z-[1000] border border-gray-200">
+                <div class="text-sm font-bold mb-2">User Density</div>
+                <div class="h-2 w-32 bg-gradient-to-r from-yellow-100 via-yellow-400 to-green-900 rounded"></div>
+                <div class="flex justify-between text-xs mt-1 text-gray-500">
+                    <span>Low</span>
+                    <span>High</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Data Table Section -->
+    <div id="data-table-container" class="p-4 bg-white shadow-lg mx-4 mb-4 rounded-lg mt-4">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4">Detailed School Data (<span id="table-mode-label">All Users</span>)</h3>
+        
+        <!-- Pagination Controls -->
+        <div class="flex justify-between items-center mb-4">
+            <div class="text-sm text-gray-700">
+                Showing <span id="pagination-start">0</span> to <span id="pagination-end">0</span> of <span id="pagination-total">0</span> entries
+            </div>
+            <div class="flex items-center space-x-4">
+                <label class="text-sm text-gray-700">Per Page:</label>
+                <select id="page-size" class="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500">
+                    <option value="10">10</option>
+                    <option value="30">30</option>
+                    <option value="50">50</option>
+                </select>
+                <div class="flex space-x-1">
+                    <button id="prev-page" class="px-3 py-1 bg-gray-200 text-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed">&larr; Prev</button>
+                    <span id="current-page-display" class="px-3 py-1 bg-blue-500 text-white rounded text-sm">1</span>
+                    <button id="next-page" class="px-3 py-1 bg-gray-200 text-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed">Next &rarr;</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto border rounded-lg">
+            <table id="data-table" class="min-w-full divide-y divide-gray-200"></table>
+        </div>
+        
+        <div class="flex justify-center items-center mt-4">
+            <div class="flex items-center space-x-4">
+                <div class="flex space-x-1">
+                    <button id="prev-page-bottom" class="px-3 py-1 bg-gray-200 text-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed">&larr; Prev</button>
+                    <span id="current-page-display-bottom" class="px-3 py-1 bg-blue-500 text-white rounded text-sm">1</span>
+                    <button id="next-page-bottom" class="px-3 py-1 bg-gray-200 text-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed">Next &rarr;</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Management Modal -->
+    <div id="data-management-modal" class="modal-overlay hidden">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-md w-11/12 transform transition-transform duration-300">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    Settings & Data
+                </h2>
+                <button id="close-data-modal-button" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <!-- API Key Section -->
+             <div class="mb-6 p-3 bg-violet-50 border border-violet-100 rounded-lg">
+                <h4 class="font-semibold text-violet-800 mb-1 text-sm">Gemini API Configuration</h4>
+                <p class="text-xs text-gray-600 mb-2">Required for the Strategic Query Tool to work.</p>
+                <div class="flex gap-2">
+                    <input type="password" id="api-key-input" placeholder="Paste your Google Gemini API Key here" class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
+                    <button id="save-api-key-button" class="px-3 py-2 bg-violet-600 text-white text-sm font-bold rounded hover:bg-violet-700 transition">Save Key</button>
+                </div>
+            </div>
+
+            <div class="space-y-4 mb-6 border-t pt-4">
+                <h4 class="font-semibold text-gray-700 mb-2 text-base">Data Upload</h4>
+                <p class="text-xs text-gray-600">Upload new CSV files to temporarily update the dashboard view.</p>
+                <div>
+                    <label class="block text-gray-500 mb-1 font-semibold text-sm">1. Update Students CSV</label>
+                    <input type="file" id="student-upload-modal" accept=".csv" class="block w-full text-gray-500 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition"/>
+                </div>
+                <div>
+                    <label class="block text-gray-500 mb-1 font-semibold text-sm">2. Update Teachers CSV</label>
+                    <input type="file" id="teacher-upload-modal" accept=".csv" class="block w-full text-gray-500 file:mr-4 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition"/>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-gray-200">
+                <h4 class="font-semibold text-gray-700 mb-2 text-base">3. Hardcode Data (Requires Password)</h4>
+                <p class="text-xs text-red-500 mb-2">Warning: This overwrites the default data inside the HTML file.</p>
+                <input type="password" id="save-password-modal" placeholder="Enter secret password" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-red-500 text-sm mb-3">
+                <button id="save-data-button-modal" class="w-full px-3 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition">
+                    Save Data to Code
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Libraries -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+    <script>
+        /**
+         * 1. DEFAULT DATA
+         */
+        let defaultStudentCSV = `school_name,school_type,postcode,city,state_name,total_users
+SEKOLAH MENENGAH KEBANGSAAN TEMENGGONG DATUK LAWAI JAU,SM KEBANGSAAN,98050,MARUDI,Sarawak,464
+SEKOLAH MENENGAH KEBANGSAAN PUJUT,SM KEBANGSAAN,98100,MIRI,Sarawak,391
+SEKOLAH MENENGAH KEBANGSAAN BINTULU,SM KEBANGSAAN,97007,BINTULU,Sarawak,372
+SEKOLAH MENENGAH KEBANGSAAN DEMAK BARU,SM KEBANGSAAN,93050,KUCHING,Sarawak,341
+SEKOLAH MENENGAH KEBANGSAAN MERBAU MIRI,SM KEBANGSAAN,98000,MIRI,Sarawak,323
+SEKOLAH MENENGAH KEBANGSAAN KIDURONG,SM KEBANGSAAN,97011,BINTULU,Sarawak,322
+SEKOLAH MENENGAH KEBANGSAAN LUTONG,SM KEBANGSAAN,98100,MIRI,Sarawak,308
+SEKOLAH MENENGAH KEBANGSAAN DALAT,SM KEBANGSAAN,96300,DALAT,Sarawak,306
+MRSM MUKAH,MAKTAB RENDAH SAINS MARA,96400,MUKAH,Sarawak,300
+SEKOLAH KEBANGSAAN ST PATRICK KUCHING,KEBANGSAAN,94600,KUCHING,Sarawak,50
+SEKOLAH KEBANGSAAN PURU SIA,KEBANGSAAN,93050,LAWAS,Sarawak,45
+SEKOLAH KEBANGSAAN SG PASSAI,KEBANGSAAN,95300,SIBU,Sarawak,30
+SEKOLAH MENENGAH KEBANGSAAN KUALA LOBANG,SM KEBANGSAAN,98000,MIRI,Sarawak,280
+SEKOLAH MENENGAH KEBANGSAAN SIBU JAYA,SM KEBANGSAAN,96000,SIBU,Sarawak,275
+SEKOLAH MENENGAH KEBANGSAAN CHUNG HUA MIRI,SM KEBANGSAAN,98000,MIRI,Sarawak,260
+SEKOLAH MENENGAH KEBANGSAAN SUNGAI MAONG,SM KEBANGSAAN,93050,KUCHING,Sarawak,250
+SEKOLAH MENENGAH KEBANGSAAN LEO MAJANG,SM KEBANGSAAN,96700,BINTULU,Sarawak,245
+SEKOLAH MENENGAH KEBANGSAAN ST. LUKE,SM KEBANGSAAN,94700,LUNDU,Sarawak,230
+SEKOLAH MENENGAH KEBANGSAAN TEEN,SM KEBANGSAAN,93050,KUCHING,Sarawak,220
+SEKOLAH MENENGAH KEBANGSAAN AGAMA SHEIKH HAJI OTHMAN ABDUL WAHAB,SMK AGAMA,93050,KUCHING,Sarawak,210
+SEKOLAH KEBANGSAAN KAMPONG MUHIBAH,KEBANGSAAN,98700,LIMBANG,Sarawak,60
+SEKOLAH KEBANGSAAN ST. JOSEPH,KEBANGSAAN,96000,SIBU,Sarawak,40
+SEKOLAH KEBANGSAAN KUALA BARAM,KEBANGSAAN,98100,MIRI,Sarawak,35`;
+
+        let defaultTeacherCSV = `school_name,school_type,postcode,city,state_name,total_users
+SEKOLAH MENENGAH KEBANGSAAN TEMENGGONG DATUK LAWAI JAU,SM KEBANGSAAN,98050,MARUDI,Sarawak,24
+SEKOLAH MENENGAH KEBANGSAAN AGAMA SARATOK,SMK AGAMA,95407,SARATOK,Sarawak,19
+SEKOLAH KEBANGSAAN SIOL KANAN,KEBANGSAAN,93050,KUCHING,Sarawak,14
+SEKOLAH MENENGAH KEBANGSAAN MARUDI,SM KEBANGSAAN,98050,BARAM,Sarawak,11
+SEKOLAH MENENGAH KEBANGSAAN BUKIT LIMA,SM KEBANGSAAN,96000,SIBU,Sarawak,10
+SEKOLAH MENENGAH KEBANGSAAN D P H ABDUL GAPOR,SM KEBANGSAAN,93350,KUCHING,Sarawak,9
+SEKOLAH KEBANGSAAN AIRPORT,KEBANGSAAN,96900,BELAGA,Sarawak,8
+SEKOLAH MENENGAH KEBANGSAAN LIMBANG,SM KEBANGSAAN,98700,LIMBANG,Sarawak,8
+SEKOLAH MENENGAH KEBANGSAAN PUJUT,SM KEBANGSAAN,98100,MIRI,Sarawak,15
+SEKOLAH MENENGAH KEBANGSAAN DEMAK BARU,SM KEBANGSAAN,93050,KUCHING,Sarawak,12
+SEKOLAH MENENGAH KEBANGSAAN KUALA LOBANG,SM KEBANGSAAN,98000,MIRI,Sarawak,15
+SEKOLAH MENENGAH KEBANGSAAN SIBU JAYA,SM KEBANGSAAN,96000,SIBU,Sarawak,13
+SEKOLAH MENENGAH KEBANGSAAN CHUNG HUA MIRI,SM KEBANGSAAN,98000,MIRI,Sarawak,14
+SEKOLAH MENENGAH KEBANGSAAN SUNGAI MAONG,SM KEBANGSAAN,93050,KUCHING,Sarawak,12
+SEKOLAH MENENGAH KEBANGSAAN LEO MAJANG,SM KEBANGSAAN,96700,BINTULU,Sarawak,11
+SEKOLAH MENENGAH KEBANGSAAN ST. LUKE,SM KEBANGSAAN,94700,LUNDU,Sarawak,10
+SEKOLAH MENENGAH KEBANGSAAN TEEN,SM KEBANGSAAN,93050,KUCHING,Sarawak,11
+SEKOLAH MENENGAH KEBANGSAAN AGAMA SHEIKH HAJI OTHMAN ABDUL WAHAB,SMK AGAMA,93050,KUCHING,Sarawak,10
+SEKOLAH KEBANGSAAN KAMPONG MUHIBAH,KEBANGSAAN,98700,LIMBANG,Sarawak,7
+SEKOLAH KEBANGSAAN ST. JOSEPH,KEBANGSAAN,96000,SIBU,Sarawak,6
+SEKOLAH KEBANGSAAN KUALA BARAM,KEBANGSAAN,98100,MIRI,Sarawak,5`;
+
+        /**
+         * 2. GEOCODING ENGINE
+         */
+        const geoLookup = {
+            schools: {
+                "SEKOLAH MENENGAH KEBANGSAAN TEMENGGONG DATUK LAWAI JAU": { lat: 4.177, lng: 114.333 },
+                "SEKOLAH MENENGAH KEBANGSAAN PUJUT": { lat: 4.435, lng: 114.015 },
+                "SEKOLAH MENENGAH KEBANGSAAN BINTULU": { lat: 3.194, lng: 113.052 },
+                "SEKOLAH MENENGAH KEBANGSAAN DEMAK BARU": { lat: 1.582, lng: 110.398 },
+                "SEKOLAH MENENGAH KEBANGSAAN MERBAU MIRI": { lat: 4.440, lng: 114.020 },
+                "SEKOLAH MENENGAH KEBANGSAAN KIDURONG": { lat: 3.250, lng: 113.080 },
+                "SEKOLAH MENENGAH KEBANGSAAN LUTONG": { lat: 4.470, lng: 114.000 },
+                "SEKOLAH MENENGAH KEBANGSAAN DALAT": { lat: 2.750, lng: 111.930 },
+                "MRSM MUKAH": { lat: 2.890, lng: 112.090 },
+                "SEKOLAH KEBANGSAAN ST PATRICK KUCHING": { lat: 1.550, lng: 110.350 },
+                "SEKOLAH KEBANGSAAN PURU SIA": { lat: 4.850, lng: 115.400 },
+                "SEKOLAH KEBANGSAAN SG PASSAI": { lat: 2.300, lng: 111.850 },
+                "SEKOLAH MENENGAH KEBANGSAAN AGAMA SARATOK": { lat: 1.730, lng: 111.340 },
+                "SEKOLAH KEBANGSAAN SIOL KANAN": { lat: 1.590, lng: 110.340 },
+                "SEKOLAH MENENGAH KEBANGSAAN MARUDI": { lat: 4.180, lng: 114.330 },
+                "SEKOLAH MENENGAH KEBANGSAAN BUKIT LIMA": { lat: 2.280, lng: 111.830 },
+                "SEKOLAH MENENGAH KEBANGSAAN D P H ABDUL GAPOR": { lat: 1.530, lng: 110.380 },
+                "SEKOLAH KEBANGSAAN AIRPORT": { lat: 2.700, lng: 113.780 },
+                "SEKOLAH MENENGAH KEBANGSAAN LIMBANG": { lat: 4.750, lng: 115.010 },
+                "SEKOLAH MENENGAH KEBANGSAAN KUALA LOBANG": { lat: 4.425, lng: 113.990 },
+                "SEKOLAH MENENGAH KEBANGSAAN SIBU JAYA": { lat: 2.220, lng: 111.805 },
+                "SEKOLAH MENENGAH KEBANGSAAN CHUNG HUA MIRI": { lat: 4.400, lng: 113.998 },
+                "SEKOLAH MENENGAH KEBANGSAAN SUNGAI MAONG": { lat: 1.545, lng: 110.330 },
+                "SEKOLAH MENENGAH KEBANGSAAN LEO MAJANG": { lat: 3.205, lng: 113.065 },
+                "SEKOLAH MENENGAH KEBANGSAAN ST. LUKE": { lat: 1.660, lng: 109.850 },
+                "SEKOLAH MENENGAH KEBANGSAAN TEEN": { lat: 1.550, lng: 110.300 },
+                "SEKOLAH MENENGAH KEBANGSAAN AGAMA SHEIKH HAJI OTHMAN ABDUL WAHAB": { lat: 1.540, lng: 110.355 },
+                "SEKOLAH KEBANGSAAN KAMPONG MUHIBAH": { lat: 4.755, lng: 115.005 },
+                "SEKOLAH KEBANGSAAN ST. JOSEPH": { lat: 2.290, lng: 111.820 },
+                "SEKOLAH KEBANGSAAN KUALA BARAM": { lat: 4.480, lng: 113.990 }
+            },
+            cities: {
+                "KUCHING": { lat: 1.5533, lng: 110.3592 },
+                "MIRI": { lat: 4.4148, lng: 114.0089 },
+                "SIBU": { lat: 2.3000, lng: 111.8000 },
+                "BINTULU": { lat: 3.1711, lng: 113.0417 },
+                "LIMBANG": { lat: 4.7600, lng: 115.0000 },
+                "SARIKEI": { lat: 2.1167, lng: 111.5167 },
+                "SRI AMAN": { lat: 1.2333, lng: 111.4500 },
+                "KAPIT": { lat: 2.0167, lng: 112.9333 },
+                "KOTA SAMARAHAN": { lat: 1.4667, lng: 110.5000 },
+                "SERIAN": { lat: 1.1667, lng: 110.5667 },
+                "MUKAH": { lat: 2.8833, lng: 112.0833 },
+                "BETONG": { lat: 1.4167, lng: 111.5333 },
+                "MARUDI": { lat: 4.1833, lng: 114.3167 },
+                "LAWAS": { lat: 4.8667, lng: 115.4000 },
+                "BELAGA": { lat: 2.7000, lng: 113.7833 },
+                "LUNDU": { lat: 1.6667, lng: 109.8500 },
+                "SARATOK": { lat: 1.7333, lng: 111.3500 },
+                "SIMUNJAN": { lat: 1.3833, lng: 110.7500 },
+                "DALAT": { lat: 2.7500, lng: 111.9333 },
+                "ASAJAYA": { lat: 1.5500, lng: 110.6167 },
+                "BEKENU": { lat: 4.0667, lng: 113.8500 },
+                "DARO": { lat: 2.5167, lng: 111.4333 },
+                "ROBAN": { lat: 1.9000, lng: 111.3000 },
+                "BARAM": { lat: 4.1833, lng: 114.3167 } 
+            }
+        };
+
+        /**
+         * 3. APP STATE
+         */
+        const appState = {
+            studentDataRaw: null,
+            teacherDataRaw: null,
+            mergedData: [],
+            filteredData: [],
+            filters: {
+                search: "",
+                type: "all",
+                city: "all"
+            },
+            dataMode: "all", // 'teachers', 'students', 'all'
+            visMode: "cluster", // 'cluster', 'heatmap'
+            topCityMode: "all", // 'teachers', 'students', 'all'
+            topSchoolMode: "all", // 'teachers', 'students', 'all'
+            
+            // Pagination and Sorting State
+            currentPage: 1,
+            pageSize: 10,
+            sortKey: 'total', // Default sort key
+            sortDir: 'desc' // 'asc' or 'desc'
+        };
+
+        // Map Variables
+        let map;
+        let markersLayer;
+        let heatmapLayer;
+
+        // Gemini API configuration
+        const apiKey = "";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+        /**
+         * 4. UTILITIES & PARSING
+         */
+        
+        // Simple CSV Parser
+        function parseCSV(csvText) {
+            const lines = csvText.split('\n').filter(line => line.trim() !== '');
+            if (lines.length === 0) return [];
+            
+            const headers = lines[0].split(',').map(h => h.trim());
+            const data = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const currentLine = lines[i].split(',');
+                
+                let rowData = {};
+                if (currentLine.length === headers.length) {
+                    headers.forEach((header, index) => {
+                        rowData[header] = currentLine[index] ? currentLine[index].trim() : '';
+                    });
+                } else if (currentLine.length > headers.length) {
+                    // Quick fix for potential commas in school name
+                    const nameParts = currentLine.slice(0, currentLine.length - headers.length + 1);
+                    rowData[headers[0]] = nameParts.join(',').trim();
+                    const rest = currentLine.slice(currentLine.length - headers.length + 1);
+                    for(let j=0; j<rest.length; j++) {
+                        rowData[headers[j+1]] = rest[j].trim();
+                    }
+                }
+                data.push(rowData);
+            }
+            return data;
+        }
+        
+        // Function to serialize data back to CSV format
+        function dataToCSV(data, userType) {
+            // Determine which schools have data for the requested user type
+            const relevantSchools = data.filter(d => d[userType] > 0);
+            
+            if (relevantSchools.length === 0) {
+                 // Return headers only if no relevant data exists
+                 return "school_name,school_type,postcode,city,state_name,total_users";
+            }
+            
+            const header = "school_name,school_type,postcode,city,state_name,total_users\n";
+            let csvBody = relevantSchools.map(d => {
+                // Since mergedData doesn't contain postcode/state_name, we use mock values or empty strings
+                // In a real app, this information would be stored explicitly.
+                const postcode = ""; // Mock/Empty value
+                const state_name = "Sarawak"; // Fixed value
+                
+                return [
+                    `"${d.name.replace(/"/g, '""')}"`, // Quote and escape school names
+                    d.type || "",
+                    postcode,
+                    d.city || "",
+                    state_name,
+                    d[userType] || 0
+                ].join(',');
+            }).join('\n');
+            
+            return header + csvBody;
+        }
+
+        function getCoordinates(schoolName, city) {
+            const cleanName = schoolName.toUpperCase().replace(/"/g, '');
+            const cleanCity = city.toUpperCase().replace(/"/g, '');
+
+            // 1. Try Exact Match
+            if (geoLookup.schools[cleanName]) {
+                return geoLookup.schools[cleanName];
+            }
+
+            // 2. Try City Fallback with Jitter (Small random offset)
+            if (geoLookup.cities[cleanCity]) {
+                const cityCoords = geoLookup.cities[cleanCity];
+                const jitter = 0.005; 
+                return {
+                    lat: cityCoords.lat + (Math.random() * jitter - jitter/2),
+                    lng: cityCoords.lng + (Math.random() * jitter - jitter/2)
+                };
+            }
+
+            // 3. Last Resort
+            return { lat: 2.55, lng: 113.0 };
+        }
+
+        function processAndMergeData() {
+            const schoolMap = new Map();
+
+            // Process Students
+            appState.studentDataRaw.forEach(row => {
+                const key = row.school_name;
+                if (!schoolMap.has(key)) {
+                    const coords = getCoordinates(row.school_name, row.city);
+                    schoolMap.set(key, {
+                        name: row.school_name.replace(/"/g, ''),
+                        type: row.school_type,
+                        city: row.city,
+                        lat: coords.lat,
+                        lng: coords.lng,
+                        students: 0,
+                        teachers: 0
+                    });
+                }
+                schoolMap.get(key).students += parseInt(row.total_users || 0);
+            });
+
+            // Process Teachers
+            appState.teacherDataRaw.forEach(row => {
+                const key = row.school_name;
+                if (!schoolMap.has(key)) {
+                    const coords = getCoordinates(row.school_name, row.city);
+                    schoolMap.set(key, {
+                        name: row.school_name.replace(/"/g, ''),
+                        type: row.school_type,
+                        city: row.city,
+                        lat: coords.lat,
+                        lng: coords.lng,
+                        students: 0,
+                        teachers: 0
+                    });
+                }
+                schoolMap.get(key).teachers += parseInt(row.total_users || 0);
+            });
+
+            appState.mergedData = Array.from(schoolMap.values()).map(s => ({
+                ...s,
+                total: s.students + s.teachers
+            }));
+
+            populateFilters();
+            updateDashboard();
+        }
+
+        /**
+         * 5. UI & MAP LOGIC
+         */
+
+        function initMap() {
+            // Centered on Sarawak
+            map = L.map('map').setView([2.5556, 113.3947], 7);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            markersLayer = L.markerClusterGroup({
+                showCoverageOnHover: false,
+                maxClusterRadius: 50
+            });
+            map.addLayer(markersLayer);
+        }
+
+        function populateFilters() {
+            // Get unique cities and types
+            const cities = new Set();
+            const types = new Set();
+
+            appState.mergedData.forEach(d => {
+                if (d.city) cities.add(d.city);
+                if (d.type) types.add(d.type);
+            });
+
+            // Fill City Select
+            const citySelect = document.getElementById('city-filter');
+            if (citySelect) {
+                citySelect.innerHTML = '<option value="all">All Cities</option>';
+                Array.from(cities).sort().forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    citySelect.appendChild(opt);
+                });
+            }
+
+            // Fill Type Select
+            const typeSelect = document.getElementById('type-filter');
+            if (typeSelect) {
+                typeSelect.innerHTML = '<option value="all">All Types</option>';
+                Array.from(types).sort().forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t;
+                    opt.textContent = t;
+                    typeSelect.appendChild(opt);
+                });
+            }
+        }
+
+        function applyFilters() {
+            appState.filteredData = appState.mergedData.filter(d => {
+                const matchSearch = d.name.toLowerCase().includes(appState.filters.search.toLowerCase());
+                const matchCity = appState.filters.city === 'all' || d.city === appState.filters.city;
+                const matchType = appState.filters.type === 'all' || d.type === appState.filters.type;
+                
+                // Only include data relevant to the current toggle mode
+                let hasData = false;
+                if (appState.dataMode === 'teachers') hasData = d.teachers > 0;
+                else if (appState.dataMode === 'students') hasData = d.students > 0;
+                else hasData = d.total > 0;
+
+                return matchSearch && matchCity && matchType && hasData;
+            });
+            
+            // Reset page to 1 after filtering
+            appState.currentPage = 1;
+        }
+        
+        function applySort(data) {
+            const key = appState.sortKey;
+            const dir = appState.sortDir;
+
+            data.sort((a, b) => {
+                const valA = a[key] !== undefined ? a[key] : '';
+                const valB = b[key] !== undefined ? b[key] : '';
+                
+                let comparison = 0;
+                
+                // Check if values are numeric
+                if (typeof valA === 'number' && typeof valB === 'number') {
+                    comparison = valA - valB;
+                } else {
+                    // String comparison
+                    comparison = String(valA).localeCompare(String(valB));
+                }
+
+                return dir === 'asc' ? comparison : comparison * -1;
+            });
+            return data;
+        }
+
+        // Function to calculate and sort city user counts
+        function calculateTopCities(data, key) {
+            const cityCounts = {};
+            data.forEach(d => {
+                // Ensure the data point has the key before accessing it
+                if (d[key] !== undefined) {
+                    cityCounts[d.city] = (cityCounts[d.city] || 0) + d[key];
+                }
+            });
+
+            return Object.entries(cityCounts)
+                .map(([city, count]) => ({ city, count }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 10);
+        }
+
+        // Function to render the top 10 list
+        function renderTopCities(data) {
+            const topCitiesList = document.getElementById('top-cities-list');
+            const topCitiesLabel = document.getElementById('top-cities-label');
+            
+            if (!topCitiesList || !topCitiesLabel) return; // Safety check
+            
+            topCitiesList.innerHTML = '';
+            
+            const key = appState.topCityMode === 'students' ? 'students' : 
+                        appState.topCityMode === 'teachers' ? 'teachers' : 'total';
+            
+            const color = appState.topCityMode === 'students' ? 'text-indigo-700' : 
+                          appState.topCityMode === 'teachers' ? 'text-orange-700' : 'text-emerald-700';
+            
+            const keyDisplay = key.charAt(0).toUpperCase() + key.slice(1);
+            topCitiesLabel.textContent = `Top 10 Cities By ${keyDisplay}`;
+
+            const top10 = calculateTopCities(data, key);
+
+            if (top10.length === 0) {
+                 topCitiesList.innerHTML = `<div class="text-sm text-gray-500 text-center py-2">No data available for this filter.</div>`;
+                 return;
+            }
+
+            top10.forEach((item, index) => {
+                const listItem = document.createElement('div');
+                listItem.className = `flex justify-between items-center text-sm p-1 rounded hover:bg-gray-100`;
+                listItem.innerHTML = `
+                    <span class="font-semibold text-gray-800">${index + 1}. ${item.city}</span>
+                    <span class="font-bold ${color}">${item.count.toLocaleString()}</span>
+                `;
+                topCitiesList.appendChild(listItem);
+            });
+        }
+        
+        // Function to render the top 10 schools list
+        function renderTopSchools(data) {
+            const topSchoolsList = document.getElementById('top-schools-list');
+            const topSchoolsLabel = document.getElementById('top-schools-label');
+            
+            if (!topSchoolsList || !topSchoolsLabel) return; // Safety check
+
+            topSchoolsList.innerHTML = '';
+            
+            // Use the new topSchoolMode state
+            const key = appState.topSchoolMode === 'students' ? 'students' : 
+                        appState.topSchoolMode === 'teachers' ? 'teachers' : 'total';
+            
+            const color = appState.topSchoolMode === 'students' ? 'text-indigo-700' : 
+                          appState.topSchoolMode === 'teachers' ? 'text-orange-700' : 'text-emerald-700';
+            
+            const keyDisplay = key.charAt(0).toUpperCase() + key.slice(1);
+            topSchoolsLabel.textContent = `Top 10 Schools by ${keyDisplay}`;
+
+
+            // Sort data by the selected key (descending) and take the top 10
+            const top10 = [...data]
+                .sort((a, b) => b[key] - a[key]) // Use dynamic key for sorting
+                .slice(0, 10);
+
+            if (top10.length === 0) {
+                 topSchoolsList.innerHTML = `<div class="text-sm text-gray-500 text-center py-2">No data available for this filter.</div>`;
+                 return;
+            }
+
+            top10.forEach((item, index) => {
+                const countVal = item[key]; // Get the count based on the key
+                const schoolNameDisplay = item.name.length > 25 ? item.name.substring(0, 22) + '...' : item.name;
+                const listItem = document.createElement('div');
+                listItem.className = `flex justify-between items-center text-sm p-1 rounded hover:bg-gray-100 group`;
+                listItem.innerHTML = `
+                    <span class="font-semibold text-gray-800 group-hover:text-blue-600" title="${item.name}">${index + 1}. ${schoolNameDisplay}</span>
+                    <span class="font-bold ${color}">${countVal.toLocaleString()}</span>
+                `;
+                topSchoolsList.appendChild(listItem);
+            });
+        }
+
+
+        function updateStats(data) {
+            const totalStudents = data.reduce((sum, d) => sum + d.students, 0);
+            const totalTeachers = data.reduce((sum, d) => sum + d.teachers, 0);
+            const totalCombined = totalStudents + totalTeachers;
+
+            // Update main header badges
+            const elSchoolsBadge = document.getElementById('total-schools-badge');
+            if (elSchoolsBadge) elSchoolsBadge.textContent = `${data.length} Schools`;
+
+            const elUsersBadge = document.getElementById('total-users-badge');
+            if (elUsersBadge) elUsersBadge.textContent = `${totalCombined.toLocaleString()} Users`;
+
+            // Update Key Metrics Panel (Static Counts)
+            const elStatStudents = document.getElementById('stat-students');
+            if (elStatStudents) elStatStudents.textContent = totalStudents.toLocaleString();
+
+            const elStatTeachers = document.getElementById('stat-teachers');
+            if (elStatTeachers) elStatTeachers.textContent = totalTeachers.toLocaleString();
+
+            const elStatTotal = document.getElementById('stat-total');
+            if (elStatTotal) elStatTotal.textContent = totalCombined.toLocaleString();
+            
+            // Update Top 10 Lists
+            renderTopCities(data);
+            renderTopSchools(data); 
+        }
+        
+        function updatePaginationControls(totalRecords) {
+            const pageSize = appState.pageSize;
+            const currentPage = appState.currentPage;
+            const totalPages = Math.ceil(totalRecords / pageSize);
+
+            const start = totalRecords === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+            const end = Math.min(currentPage * pageSize, totalRecords);
+
+            // Use null checks to prevent errors if elements are missing
+            const startEl = document.getElementById('pagination-start');
+            if (startEl) startEl.textContent = start.toLocaleString();
+            
+            const endEl = document.getElementById('pagination-end');
+            if (endEl) endEl.textContent = end.toLocaleString();
+            
+            const totalEl = document.getElementById('pagination-total');
+            if (totalEl) totalEl.textContent = totalRecords.toLocaleString();
+
+            const prevButtons = [document.getElementById('prev-page'), document.getElementById('prev-page-bottom')];
+            const nextButtons = [document.getElementById('next-page'), document.getElementById('next-page-bottom')];
+            const currentPageDisplays = [document.getElementById('current-page-display'), document.getElementById('current-page-display-bottom')];
+
+            prevButtons.forEach(btn => { if(btn) btn.disabled = currentPage === 1; });
+            nextButtons.forEach(btn => { if(btn) btn.disabled = currentPage >= totalPages || totalRecords === 0; });
+            currentPageDisplays.forEach(span => { if(span) span.textContent = `${currentPage} / ${totalPages > 0 ? totalPages : 1}`; });
+        }
+
+        function renderDataTable() {
+            const data = applySort([...appState.filteredData]); // Sort a copy of filtered data
+            
+            updatePaginationControls(data.length);
+
+            const pageSize = appState.pageSize;
+            const currentPage = appState.currentPage;
+            const startIndex = (currentPage - 1) * pageSize;
+            const paginatedData = data.slice(startIndex, startIndex + pageSize);
+
+            const tableBody = document.createElement('tbody');
+            const tableHeader = document.createElement('thead');
+            const table = document.getElementById('data-table');
+            const modeLabel = document.getElementById('table-mode-label');
+            
+            if (modeLabel) {
+                const mode = appState.dataMode;
+                const modeText = mode.charAt(0).toUpperCase() + mode.slice(1);
+                modeLabel.textContent = (mode === 'all' ? 'All' : modeText) + (mode === 'all' ? ' Users' : ' Only');
+            }
+
+            if (!table) return; // Safety check
+
+            // Define columns and their sort keys
+            const columns = [
+                { key: 'name', title: 'School Name' },
+                { key: 'city', title: 'City' },
+                { key: 'type', title: 'Type' }
+            ];
+
+            const mode = appState.dataMode;
+            if (mode === 'all') {
+                columns.push({ key: 'teachers', title: 'Teachers' });
+                columns.push({ key: 'students', title: 'Students' });
+                columns.push({ key: 'total', title: 'Total Users' });
+            } else if (mode === 'teachers') {
+                columns.push({ key: 'teachers', title: 'Teachers' });
+            } else if (mode === 'students') {
+                columns.push({ key: 'students', title: 'Students' });
+            }
+            
+            // Render Header with Sort Indicators
+            let headerRowHtml = '<tr>';
+            columns.forEach(col => {
+                let sortClass = 'sortable';
+                if (appState.sortKey === col.key) {
+                    sortClass += appState.sortDir === 'asc' ? ' asc' : ' desc';
+                }
+
+                headerRowHtml += `<th 
+                    class="px-6 py-3 text-left text-base font-medium text-gray-500 uppercase tracking-wider ${sortClass}" 
+                    data-sort-key="${col.key}"
+                >${col.title}</th>`;
+            });
+            headerRowHtml += '</tr>';
+            tableHeader.innerHTML = headerRowHtml;
+
+            // Clear and Append Header
+            table.innerHTML = '';
+            table.appendChild(tableHeader);
+            
+            // Attach sort listeners after rendering header
+            tableHeader.querySelectorAll('th.sortable').forEach(th => {
+                th.removeEventListener('click', handleSort); // Prevent double-binding
+                th.addEventListener('click', handleSort);
+            });
+
+
+            // Render Body
+            paginatedData.forEach(d => {
+                let rowHtml = '<tr class="bg-white even:bg-gray-50 hover:bg-blue-50">';
+                columns.forEach(col => {
+                    let value = d[col.key] || '-';
+                    if (['teachers', 'students', 'total'].includes(col.key)) {
+                        const colorClass = col.key === 'teachers' ? 'text-orange-600' : 
+                                           col.key === 'students' ? 'text-indigo-600' : 'text-emerald-700';
+                        rowHtml += `<td class="px-6 py-4 whitespace-nowrap text-base font-medium ${colorClass}">${value.toLocaleString()}</td>`;
+                    } else {
+                        rowHtml += `<td class="px-6 py-4 text-base text-gray-900">${value}</td>`;
+                    }
+                });
+                rowHtml += '</tr>';
+                tableBody.insertAdjacentHTML('beforeend', rowHtml);
+            });
+            
+            table.appendChild(tableBody);
+        }
+
+        function handleSort(event) {
+            const newSortKey = event.currentTarget.getAttribute('data-sort-key');
+            
+            if (appState.sortKey === newSortKey) {
+                // Toggle direction if same key is clicked
+                appState.sortDir = appState.sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                // Set new key, default to descending for numerical values, ascending for strings
+                appState.sortKey = newSortKey;
+                if (['teachers', 'students', 'total'].includes(newSortKey)) {
+                    appState.sortDir = 'desc';
+                } else {
+                    appState.sortDir = 'asc';
+                }
+            }
+            appState.currentPage = 1; // Reset to first page after sorting
+            updateDashboard();
+        }
+
+        function updateMapVisualization(data) {
+            // Clear existing layers
+            markersLayer.clearLayers();
+            if (heatmapLayer) {
+                map.removeLayer(heatmapLayer);
+                heatmapLayer = null;
+            }
+
+            if (appState.visMode === 'cluster') {
+                const legend = document.getElementById('heatmap-legend');
+                if (legend) legend.classList.add('hidden');
+                
+                data.forEach(d => {
+                    let countVal = 0;
+                    if (appState.dataMode === 'all') countVal = d.total;
+                    if (appState.dataMode === 'students') countVal = d.students;
+                    if (appState.dataMode === 'teachers') countVal = d.teachers;
+
+                    const marker = L.marker([d.lat, d.lng], { title: d.name });
+                    
+                    const popupContent = `
+                        <div class="p-2 font-sans">
+                            <h3 class="font-bold text-lg text-blue-800 mb-1 border-b border-blue-100 pb-1">${d.name}</h3>
+                            <p class="text-sm text-gray-500 mb-2">${d.city} | ${d.type}</p>
+                            <div class="grid grid-cols-2 gap-2 text-base">
+                                <div class="${appState.dataMode === 'teachers' ? 'font-bold text-orange-600' : ''}">
+                                    Teachers: ${d.teachers.toLocaleString()}
+                                </div>
+                                <div class="${appState.dataMode === 'students' ? 'font-bold text-indigo-600' : ''}">
+                                    Students: ${d.students.toLocaleString()}
+                                </div>
+                            </div>
+                            <div class="mt-2 pt-2 border-t border-gray-100 font-bold text-center text-lg text-green-700">
+                                Total: ${d.total.toLocaleString()}
+                            </div>
+                        </div>
+                    `;
+                    
+                    marker.bindPopup(popupContent);
+                    
+                    // Add custom tooltip for quick view
+                    marker.bindTooltip(`${d.name}: ${countVal.toLocaleString()}`, { direction: 'top' });
+                    
+                    markersLayer.addLayer(marker);
+                });
+                map.addLayer(markersLayer);
+
+            } else if (appState.visMode === 'heatmap') {
+                const legend = document.getElementById('heatmap-legend');
+                if (legend) legend.classList.remove('hidden');
+
+                // Calculate max for scaling intensity
+                let maxVal = 0;
+                const points = data.map(d => {
+                    let val = 0;
+                    if (appState.dataMode === 'all') val = d.total;
+                    if (appState.dataMode === 'students') val = d.students;
+                    if (appState.dataMode === 'teachers') val = d.teachers;
+                    if (val > maxVal) maxVal = val;
+                    return { lat: d.lat, lng: d.lng, count: val };
+                });
+
+                // Normalize intensity (0.0 to 1.0) 
+                const heatPoints = points.map(p => [p.lat, p.lng, (p.count / maxVal) * 5]); 
+
+                heatmapLayer = L.heatLayer(heatPoints, {
+                    radius: 25,
+                    blur: 15,
+                    maxZoom: 10,
+                    gradient: {
+                        0.1: '#fef08a', // Light Yellow (Tailwind yellow-200)
+                        0.4: '#facc15', // Yellow-400
+                        0.6: '#4ade80', // Green-400
+                        1.0: '#14532d'  // Dark Green (Green-900)
+                    }
+                }).addTo(map);
+            }
+        }
+
+
+        function updateDashboard() {
+            applyFilters();
+            const data = appState.filteredData;
+            
+            updateStats(data);
+            renderDataTable(); 
+            updateMapVisualization(data);
+        }
+        
+        // Custom Modal Function to replace alert()
+        function showModal(title, message, isError = false, isAnalysis = false) {
+            const existingModal = document.getElementById('custom-modal');
+            if (existingModal) existingModal.remove();
+
+            const bgColor = isError ? 'bg-red-600' : isAnalysis ? 'bg-violet-700' : 'bg-green-600';
+            const btnColor = isError ? 'bg-red-500 hover:bg-red-600' : isAnalysis ? 'bg-violet-500 hover:bg-violet-600' : 'bg-green-500 hover:bg-green-600';
+            
+            const modal = document.createElement('div');
+            modal.id = 'custom-modal';
+            modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-[5000] transition-opacity duration-300';
+            modal.innerHTML = `
+                <div class="bg-white p-6 rounded-xl shadow-2xl max-w-lg w-11/12 md:w-full max-h-[80vh] overflow-y-auto transform transition-transform duration-300 scale-95 opacity-0" id="modal-content">
+                    <h4 class="text-xl font-bold mb-3 ${isError ? 'text-red-700' : isAnalysis ? 'text-violet-700' : 'text-green-700'}">${title}</h4>
+                    <div class="text-gray-700 mb-4 whitespace-pre-wrap">${message}</div>
+                    <button onclick="document.getElementById('custom-modal').remove()" class="mt-2 px-4 py-2 ${btnColor} text-white rounded-lg font-semibold transition">OK</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            // Trigger animation
+            setTimeout(() => {
+                document.getElementById('modal-content').classList.remove('scale-95', 'opacity-0');
+            }, 10);
+        }
+
+        /**
+         * 6. SAVE TO CODE LOGIC
+         */
+        const SECRET_PASSWORD_BASE64 = "UGFuZGFpQEA4ODg4"; // "Pandai@@8888" encoded in Base64
+
+        function handleSaveToCode() {
+            // Target elements inside the modal
+            const passwordInput = document.getElementById('save-password-modal');
+            const password = passwordInput.value;
+
+            // Encode the user's input to compare with the stored hash
+            if (btoa(password) !== SECRET_PASSWORD_BASE64) {
+                showModal("Access Denied", "The password you entered is incorrect. Data was not saved.", true);
+                passwordInput.value = ''; // Clear password
+                return;
+            }
+
+            // 1. Generate new CSV strings from the current merged data
+            const newStudentCSV = dataToCSV(appState.mergedData, 'students');
+            const newTeacherCSV = dataToCSV(appState.mergedData, 'teachers');
+
+            // 2. Simulate saving by updating the hardcoded variables
+            defaultStudentCSV = newStudentCSV;
+            defaultTeacherCSV = newTeacherCSV;
+
+            // 3. Log the new data for the user to manually copy (since we can't write to the file system)
+            console.log("--- START NEW DEFAULT STUDENT CSV DATA (Copy this) ---");
+            console.log(defaultStudentCSV);
+            console.log("--- END NEW DEFAULT STUDENT CSV DATA ---");
+            
+            console.log("--- START NEW DEFAULT TEACHER CSV DATA (Copy this) ---");
+            console.log(defaultTeacherCSV);
+            console.log("--- END NEW DEFAULT TEACHER CSV DATA ---");
+
+
+            // 4. Reset state and refresh dashboard 
+            appState.studentDataRaw = parseCSV(defaultStudentCSV);
+            appState.teacherDataRaw = parseCSV(defaultTeacherCSV);
+            processAndMergeData();
+            
+            showModal("Save Successful", "The new data has been saved to the dashboard's internal default variables. The dashboard is now based on this permanent data.");
+            
+            passwordInput.value = ''; // Clear password on success
+            document.getElementById('data-management-modal').classList.add('hidden'); // Close modal
+        }
+        
+        /**
+         * 7. GEMINI API LLM INTEGRATION: Strategic Query Tool
+         */
+        
+        async function generateStrategicQuery() {
+            const userQuery = document.getElementById('llm-query-input').value.trim();
+            
+            // Check for API key
+            const userApiKey = localStorage.getItem('gemini_api_key');
+            if (!userApiKey) {
+                 showModal("API Key Missing", "Please enter your Google Gemini API Key in the Settings & Data menu first.", true);
+                 return;
+            }
+
+            if (!userQuery) {
+                showModal("Input Required", "Please enter your strategic question or use case (e.g., 'Where should I focus resources to increase teacher adoption?').", true);
+                return;
+            }
+            
+            // Disable button and show spinner
+            const btn = document.getElementById('ai-query-button');
+            const originalContent = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner mr-2"></div> Generating Insight...';
+            
+            const totalStudents = appState.filteredData.reduce((sum, d) => sum + d.students, 0);
+            const totalTeachers = appState.filteredData.reduce((sum, d) => sum + d.teachers, 0);
+            const totalCombined = totalStudents + totalTeachers;
+            
+            // Calculate engagement ratios and top performing areas
+            const studentToTeacherRatio = totalTeachers > 0 ? (totalStudents / totalTeachers).toFixed(1) : 'Undefined (Zero Teachers)';
+            const top5Cities = calculateTopCities(appState.filteredData, 'total').slice(0, 5).map(c => `${c.city} (${c.count.toLocaleString()} users)`).join('; ');
+            
+            // Get detailed school data for fine-grained analysis (up to 50 for context, sorted by total users)
+            const schoolsForContext = applySort([...appState.filteredData])
+                .slice(0, 50)
+                .map(d => `${d.name} in ${d.city} (${d.type}) | Students: ${d.students} | Teachers: ${d.teachers} | Total: ${d.total}`)
+                .join('\n');
+
+
+            // Determine current filters
+            const currentFilters = [];
+            if (appState.filters.city !== 'all') currentFilters.push(`City Filter: ${appState.filters.city}`);
+            if (appState.filters.type !== 'all') currentFilters.push(`School Type Filter: ${appState.filters.type}`);
+            if (appState.filters.search) currentFilters.push(`School Search: ${appState.filters.search}`);
+            
+            const filterContext = currentFilters.length > 0 ? `(FILTERS: ${currentFilters.join('; ')})` : '(FILTERS: None - Showing all Sarawak data)';
+
+            const dataSnapshot = `
+--- DATA CONTEXT ---
+${filterContext}
+Total Schools in View: ${appState.filteredData.length}
+Total Students: ${totalStudents.toLocaleString()}
+Total Teachers: ${totalTeachers.toLocaleString()}
+Student/Teacher Ratio: 1:${studentToTeacherRatio}
+Top 5 Cities (by Total Users): ${top5Cities}
+
+--- SCHOOL LEVEL DATA (Top 50 Only) ---
+${schoolsForContext}
+
+--- USER QUERY ---
+${userQuery}
+            `;
+
+            const systemPrompt = "You are an expert strategic analyst for the Pandai educational platform. You must answer the user's query by strictly referencing the provided data context (Sarawak school usage statistics) and translating those statistics into actionable business insights. Structure your answer clearly with the following sections: 1) Executive Summary (Direct answer to the query). 2) Data Rationale (Specific data points supporting your answer). 3) Actionable Recommendation (Next step based on the insight).";
+            
+            const dynamicApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${userApiKey}`;
+
+            try {
+                const payload = {
+                    contents: [{ parts: [{ text: dataSnapshot }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                };
+
+                const response = await fetch(dynamicApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                
+                if (result.error) {
+                     throw new Error(result.error.message || "API Error");
+                }
+
+                const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "The analysis engine returned an empty response. Please try rephrasing your query.";
+                
+                showModal("✨ Strategic Insight Result", text, false, true);
+                
+            } catch (error) {
+                console.error('Gemini API Error:', error);
+                showModal("API Error", `Failed to connect to Gemini: ${error.message}. Please check your API Key.`, true);
+            } finally {
+                // Re-enable button
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
+            }
+        }
+        
+        // Unified file upload handler
+        function handleModalFileUpload(type) {
+            return function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const text = e.target.result;
+                    if (type === 'student') appState.studentDataRaw = parseCSV(text);
+                    else appState.teacherDataRaw = parseCSV(text);
+                    
+                    processAndMergeData();
+                    // Custom message to emphasize that data is temporary until save button is pressed
+                    showModal("Data Loaded Temporarily", `${type.charAt(0).toUpperCase() + type.slice(1)} data loaded and dashboard refreshed. This change is TEMPORARY. Click 'Save Data to Code' with the password to make it permanent.`);
+                };
+                reader.readAsText(file);
+            }
+        }
+        
+        function handleSaveApiKey() {
+            const keyInput = document.getElementById('api-key-input');
+            const key = keyInput.value.trim();
+            
+            if (key) {
+                localStorage.setItem('gemini_api_key', key);
+                showModal("Success", "API Key saved securely to your browser's Local Storage.");
+                keyInput.value = ''; // Clear input for security
+            } else {
+                showModal("Error", "Please enter a valid API Key.", true);
+            }
+        }
+        
+        // Helper to safely add event listener only if element exists
+        function safeAddEventListener(id, event, handler) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener(event, handler);
+            }
+        }
+
+
+        /**
+         * 8. EVENT LISTENERS
+         */
+        function handlePaginationClick(direction) {
+            const totalPages = Math.ceil(appState.filteredData.length / appState.pageSize);
+            
+            if (direction === 'next' && appState.currentPage < totalPages) {
+                appState.currentPage++;
+            } else if (direction === 'prev' && appState.currentPage > 1) {
+                appState.currentPage--;
+            }
+            renderDataTable(); // Only re-render the table, as stats/map data is unchanged
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            
+            // Load Defaults
+            appState.studentDataRaw = parseCSV(defaultStudentCSV);
+            appState.teacherDataRaw = parseCSV(defaultTeacherCSV);
+            processAndMergeData();
+
+            // Search
+            safeAddEventListener('search-input', 'input', (e) => {
+                appState.filters.search = e.target.value;
+                updateDashboard();
+            });
+
+            // Filters
+            safeAddEventListener('type-filter', 'change', (e) => {
+                appState.filters.type = e.target.value;
+                updateDashboard();
+            });
+            safeAddEventListener('city-filter', 'change', (e) => {
+                appState.filters.city = e.target.value;
+                updateDashboard();
+            });
+
+            // Data Toggles (Radio for Map/Table Mode)
+            document.querySelectorAll('input[name="data-mode"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    appState.dataMode = e.target.value;
+                    updateDashboard();
+                });
+            });
+
+            // Vis Toggle (Checkbox)
+            safeAddEventListener('vis-toggle', 'change', (e) => {
+                appState.visMode = e.target.checked ? 'heatmap' : 'cluster';
+                updateDashboard();
+            });
+
+            // Top 10 Toggle (Radio for Top 10 list view) - CITIES
+            document.querySelectorAll('input[name="top10-city-mode"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    appState.topCityMode = e.target.value;
+                    renderTopCities(appState.filteredData);
+                });
+            });
+            
+            // Top 10 Toggle (Radio for Top 10 list view) - SCHOOLS
+            document.querySelectorAll('input[name="top10-school-mode"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    appState.topSchoolMode = e.target.value;
+                    renderTopSchools(appState.filteredData);
+                });
+            });
+
+            // Pagination Controls
+            safeAddEventListener('page-size', 'change', (e) => {
+                appState.pageSize = parseInt(e.target.value);
+                appState.currentPage = 1;
+                renderDataTable();
+            });
+
+            // Use the safer array filter pattern for pagination buttons
+            const prevPageButtons = [document.getElementById('prev-page'), document.getElementById('prev-page-bottom')].filter(b => b);
+            const nextPageButtons = [document.getElementById('next-page'), document.getElementById('next-page-bottom')].filter(b => b);
+            
+            prevPageButtons.forEach(btn => btn.addEventListener('click', () => handlePaginationClick('prev')));
+            nextPageButtons.forEach(btn => btn.addEventListener('click', () => handlePaginationClick('next')));
+
+            // MODAL UI LISTENERS
+            const dataModal = document.getElementById('data-management-modal');
+            
+            safeAddEventListener('open-data-modal-button', 'click', () => {
+                if(dataModal) dataModal.classList.remove('hidden');
+            });
+
+            safeAddEventListener('close-data-modal-button', 'click', () => {
+                if(dataModal) dataModal.classList.add('hidden');
+            });
+            
+            // MODAL FILE & SAVE LISTENERS
+            safeAddEventListener('student-upload-modal', 'change', handleModalFileUpload('student'));
+            safeAddEventListener('teacher-upload-modal', 'change', handleModalFileUpload('teacher'));
+            safeAddEventListener('save-data-button-modal', 'click', handleSaveToCode);
+            safeAddEventListener('save-api-key-button', 'click', handleSaveApiKey);
+            
+            // LLM Query Listener
+            safeAddEventListener('ai-query-button', 'click', generateStrategicQuery);
+        });
+    </script>
+</body>
+</html>
